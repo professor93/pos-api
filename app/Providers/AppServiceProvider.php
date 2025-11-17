@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Dedoc\Scramble\Scramble;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Configure Scramble to use /api-docs instead of /docs/api
+        Scramble::registerUiRoute('api-docs')
+            ->middleware(config('scramble.middleware', []));
+
+        Scramble::registerJsonSpecificationRoute('api-docs.json')
+            ->middleware(config('scramble.middleware', []));
     }
 }

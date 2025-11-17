@@ -14,7 +14,37 @@ class EventController extends Controller
 {
     /**
      * Handle product catalog created event
-     * POST /api/v1/events/product-catalog/created
+     *
+     * This endpoint processes product catalog events from external systems.
+     * Products are created with status='new' for later processing.
+     * Duplicate barcodes are gracefully handled and reported in the response.
+     *
+     * @tags Events
+     *
+     * @param  Request  $request
+     * @return JsonResponse
+     *
+     * @response 201 {
+     *   "ok": true,
+     *   "code": 201,
+     *   "message": "Product catalog event processed",
+     *   "result": {
+     *     "products": [
+     *       {
+     *         "id": 1,
+     *         "name": "Product A",
+     *         "barcode": "123456",
+     *         "status": "new"
+     *       }
+     *     ],
+     *     "created_count": 1,
+     *     "skipped_count": 0,
+     *     "skipped": []
+     *   },
+     *   "meta": {
+     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *   }
+     * }
      */
     public function productCatalogCreated(Request $request): JsonResponse
     {
@@ -107,7 +137,36 @@ class EventController extends Controller
 
     /**
      * Handle inventory items added event
-     * POST /api/v1/events/inventory/items/added
+     *
+     * This endpoint processes inventory addition events from external systems.
+     * Records are created with status='new' for later processing.
+     * No validation is performed on product_id or branch_id existence.
+     *
+     * @tags Events
+     *
+     * @param  Request  $request
+     * @return JsonResponse
+     *
+     * @response 201 {
+     *   "ok": true,
+     *   "code": 201,
+     *   "message": "Inventory items added successfully",
+     *   "result": {
+     *     "inventory_records": [
+     *       {
+     *         "id": 1,
+     *         "product_id": 1,
+     *         "branch_id": 1,
+     *         "quantity_added": 10.5,
+     *         "new_quantity": 50.5
+     *       }
+     *     ],
+     *     "count": 1
+     *   },
+     *   "meta": {
+     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *   }
+     * }
      */
     public function inventoryItemsAdded(Request $request): JsonResponse
     {
@@ -192,7 +251,36 @@ class EventController extends Controller
 
     /**
      * Handle inventory items removed event
-     * POST /api/v1/events/inventory/items/removed
+     *
+     * This endpoint processes inventory removal events from external systems.
+     * Records are created with status='new' for later processing.
+     * No validation is performed on product_id or branch_id existence.
+     *
+     * @tags Events
+     *
+     * @param  Request  $request
+     * @return JsonResponse
+     *
+     * @response 201 {
+     *   "ok": true,
+     *   "code": 201,
+     *   "message": "Inventory items removed successfully",
+     *   "result": {
+     *     "inventory_records": [
+     *       {
+     *         "id": 2,
+     *         "product_id": 1,
+     *         "branch_id": 1,
+     *         "quantity_removed": 5.0,
+     *         "new_quantity": 45.5
+     *       }
+     *     ],
+     *     "count": 1
+     *   },
+     *   "meta": {
+     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *   }
+     * }
      */
     public function inventoryItemsRemoved(Request $request): JsonResponse
     {
