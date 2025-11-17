@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -13,6 +14,7 @@ class Sale extends Model
 
     protected $fillable = [
         'check_number',
+        'branch_id',
         'store_id',
         'cashier_id',
         'total_amount',
@@ -32,6 +34,14 @@ class Sale extends Model
             'final_amount' => 'decimal:2',
             'sale_datetime' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the branch for this sale.
+     */
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     /**

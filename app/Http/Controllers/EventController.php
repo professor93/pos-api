@@ -21,7 +21,7 @@ class EventController extends Controller
         $validator = Validator::make($request->all(), [
             'products' => 'required|array|min:1',
             'products.*.name' => 'required|string',
-            'products.*.barcode' => 'required|string|unique:products,barcode',
+            'products.*.barcode' => 'required|string',
             'products.*.description' => 'nullable|string',
             'products.*.price' => 'required|numeric|min:0',
             'products.*.unit' => 'required|string',
@@ -43,8 +43,20 @@ class EventController extends Controller
 
             $data = $validator->validated();
             $createdProducts = [];
+            $skippedProducts = [];
 
             foreach ($data['products'] as $productData) {
+                // Check if product with this barcode already exists
+                $existingProduct = Product::where('barcode', $productData['barcode'])->first();
+
+                if ($existingProduct) {
+                    $skippedProducts[] = [
+                        'barcode' => $productData['barcode'],
+                        'reason' => 'Product with this barcode already exists',
+                    ];
+                    continue;
+                }
+
                 $product = Product::create([
                     'name' => $productData['name'],
                     'barcode' => $productData['barcode'],
@@ -53,12 +65,14 @@ class EventController extends Controller
                     'unit' => $productData['unit'],
                     'category' => $productData['category'] ?? null,
                     'is_active' => true,
+                    'status' => 'new',
                 ]);
 
                 $createdProducts[] = [
                     'id' => $product->id,
                     'name' => $product->name,
                     'barcode' => $product->barcode,
+                    'status' => $product->status,
                 ];
             }
 
@@ -67,10 +81,12 @@ class EventController extends Controller
             return ApiResponse::make(
                 true,
                 201,
-                'Product catalog created successfully',
+                'Product catalog event processed',
                 [
                     'products' => $createdProducts,
-                    'count' => count($createdProducts),
+                    'created_count' => count($createdProducts),
+                    'skipped_count' => count($skippedProducts),
+                    'skipped' => $skippedProducts,
                 ],
                 [
                     'timestamp' => now()->toISOString(),
@@ -97,13 +113,13 @@ class EventController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:products,id',
-            'items.*.branch_id' => 'required|integer|exists:branches,id',
+            'items.*.product_id' => 'required|integer',
+            'items.*.branch_id' => 'required|integer',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.previous_quantity' => 'required|numeric|min:0',
             'items.*.reason' => 'nullable|string',
             'items.*.notes' => 'nullable|string',
-            'user_id' => 'nullable|integer|exists:users,id',
+            'user_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -135,6 +151,7 @@ class EventController extends Controller
                     'reason' => $item['reason'] ?? 'Stock replenishment',
                     'notes' => $item['notes'] ?? null,
                     'user_id' => $data['user_id'] ?? null,
+                    'status' => 'new',
                 ]);
 
                 $inventoryRecords[] = [
@@ -181,13 +198,13 @@ class EventController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:products,id',
-            'items.*.branch_id' => 'required|integer|exists:branches,id',
+            'items.*.product_id' => 'required|integer',
+            'items.*.branch_id' => 'required|integer',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.previous_quantity' => 'required|numeric|min:0',
             'items.*.reason' => 'nullable|string',
             'items.*.notes' => 'nullable|string',
-            'user_id' => 'nullable|integer|exists:users,id',
+            'user_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -219,6 +236,7 @@ class EventController extends Controller
                     'reason' => $item['reason'] ?? 'Stock depletion',
                     'notes' => $item['notes'] ?? null,
                     'user_id' => $data['user_id'] ?? null,
+                    'status' => 'new',
                 ]);
 
                 $inventoryRecords[] = [

@@ -21,6 +21,7 @@ class PromoCodeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'check_number' => 'required|string|unique:sales,check_number',
+            'branch_id' => 'required|integer|exists:branches,id',
             'total_amount' => 'required|numeric|min:0',
             'discount_amount' => 'required|numeric|min:0',
             'sale_datetime' => 'required|date',
@@ -57,6 +58,7 @@ class PromoCodeController extends Controller
             // Create the sale record
             $sale = Sale::create([
                 'check_number' => $data['check_number'],
+                'branch_id' => $data['branch_id'],
                 'store_id' => $data['store_id'],
                 'cashier_id' => $data['cashier_id'],
                 'total_amount' => $data['total_amount'],

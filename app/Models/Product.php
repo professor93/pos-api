@@ -18,6 +18,7 @@ class Product extends Model
         'unit',
         'category',
         'is_active',
+        'status',
     ];
 
     protected function casts(): array

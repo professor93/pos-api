@@ -20,7 +20,11 @@ return new class extends Migration
             $table->string('unit')->default('pcs'); // pcs, kg, litre, etc.
             $table->string('category')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->enum('status', ['new', 'processed', 'failed'])->default('new');
             $table->timestamps();
+
+            // Add index for status
+            $table->index('status');
         });
     }
 

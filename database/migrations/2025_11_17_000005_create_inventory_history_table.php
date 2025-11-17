@@ -13,16 +13,22 @@ return new class extends Migration
     {
         Schema::create('inventory_history', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->foreignId('branch_id')->constrained('branches')->onDelete('cascade');
+            $table->unsignedBigInteger('product_id'); // No constraint for events
+            $table->unsignedBigInteger('branch_id'); // No constraint for events
             $table->enum('type', ['added', 'removed', 'adjusted']);
             $table->decimal('quantity', 10, 3);
             $table->decimal('previous_quantity', 10, 3);
             $table->decimal('new_quantity', 10, 3);
             $table->string('reason')->nullable();
             $table->text('notes')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->enum('status', ['new', 'processed', 'failed'])->default('new');
             $table->timestamps();
+
+            // Add indexes for better query performance
+            $table->index('product_id');
+            $table->index('branch_id');
+            $table->index('status');
         });
     }
 
