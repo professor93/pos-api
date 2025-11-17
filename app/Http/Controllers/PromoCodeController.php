@@ -15,7 +15,40 @@ class PromoCodeController extends Controller
 {
     /**
      * Generate a promo code based on a sales receipt
-     * POST /api/v1/promo-codes/generate
+     *
+     * This endpoint creates a sale record and generates a promo code for the customer.
+     * The branch must exist in the system before generating a promo code.
+     *
+     * @tags Promo Codes
+     *
+     * @param  Request  $request
+     * @return JsonResponse
+     *
+     * @response 201 {
+     *   "ok": true,
+     *   "code": 201,
+     *   "message": "Promo code generated successfully",
+     *   "result": {
+     *     "sale_id": 1,
+     *     "check_number": "CHK-001",
+     *     "promo_code": "PROMO20251117ABC123",
+     *     "amount_spent": 90.00
+     *   },
+     *   "meta": {
+     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *   }
+     * }
+     *
+     * @response 400 {
+     *   "ok": false,
+     *   "code": 400,
+     *   "message": "Validation failed",
+     *   "meta": {
+     *     "errors": {
+     *       "branch_id": ["The branch id field is required."]
+     *     }
+     *   }
+     * }
      */
     public function generate(Request $request): JsonResponse
     {
@@ -131,7 +164,35 @@ class PromoCodeController extends Controller
 
     /**
      * Cancel items from a receipt and update promo code status
-     * POST /api/v1/promo-codes/cancel
+     *
+     * This endpoint marks specific items in a sale as cancelled and updates the promo code status.
+     * If all items are cancelled, the sale status becomes 'cancelled', otherwise 'partially_cancelled'.
+     *
+     * @tags Promo Codes
+     *
+     * @param  Request  $request
+     * @return JsonResponse
+     *
+     * @response 200 {
+     *   "ok": true,
+     *   "code": 200,
+     *   "message": "Items cancelled successfully",
+     *   "result": {
+     *     "sale_id": 1,
+     *     "status": "partially_cancelled",
+     *     "cancelled_items_count": 2,
+     *     "total_cancelled_amount": 50.00
+     *   },
+     *   "meta": {
+     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *   }
+     * }
+     *
+     * @response 403 {
+     *   "ok": false,
+     *   "code": 403,
+     *   "message": "Store ID does not match the receipt"
+     * }
      */
     public function cancel(Request $request): JsonResponse
     {
