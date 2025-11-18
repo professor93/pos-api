@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Str;
 use Illuminate\Support\ServiceProvider;
@@ -36,12 +37,11 @@ class AppServiceProvider extends ServiceProvider
             });
 
         // Remove User schema from documentation
-        Scramble::extendOpenApi(function ($openApi) {
+        Scramble::afterOpenApiGenerated(function (OpenApi $openApi) {
             $schemas = $openApi->components->schemas ?? [];
             if (isset($schemas['User'])) {
                 unset($openApi->components->schemas['User']);
             }
-            return $openApi;
         });
     }
 }
