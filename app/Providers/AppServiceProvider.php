@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Dedoc\Scramble\Scramble;
+use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Str;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -28,10 +30,10 @@ class AppServiceProvider extends ServiceProvider
             ->middleware(config('scramble.middleware', []));
 
         // Filter routes to only show /api/v1/* endpoints
-        Scramble::routes(function ($router) {
-            return $router
-                ->whereStartsWith('api/v1');
-        });
+        Scramble::configure()
+            ->routes(function (Route $route) {
+                return Str::startsWith($route->uri, 'api/v1');
+            });
 
         // Remove User schema from documentation
         Scramble::extendOpenApi(function ($openApi) {
