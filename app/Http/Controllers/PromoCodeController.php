@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Models\Branch;
 use App\Models\PromoCodeGenerationHistory;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -17,7 +18,7 @@ class PromoCodeController extends Controller
      * Generate a promo code based on a sales receipt
      *
      * This endpoint creates a sale record and generates a promo code for the customer.
-     * The branch must exist in the system before generating a promo code.
+     * The store (branch) is looked up by store_id (matching the branch code).
      *
      * @tags Promo Codes
      *
@@ -39,22 +40,16 @@ class PromoCodeController extends Controller
      *   }
      * }
      *
-     * @response 400 {
+     * @response 404 {
      *   "ok": false,
-     *   "code": 400,
-     *   "message": "Validation failed",
-     *   "meta": {
-     *     "errors": {
-     *       "branch_id": ["The branch id field is required."]
-     *     }
-     *   }
+     *   "code": 404,
+     *   "message": "Branch not found for the provided store_id"
      * }
      */
     public function generate(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'check_number' => 'required|string|unique:sales,check_number',
-            'branch_id' => 'required|integer|exists:branches,id',
             'total_amount' => 'required|numeric|min:0',
             'discount_amount' => 'required|numeric|min:0',
             'sale_datetime' => 'required|date',
@@ -88,10 +83,21 @@ class PromoCodeController extends Controller
             $data = $validator->validated();
             $finalAmount = $data['total_amount'] - $data['discount_amount'];
 
+            // Look up branch by store_id (which matches branch code)
+            $branch = Branch::where('code', $data['store_id'])->first();
+
+            if (!$branch) {
+                return ApiResponse::make(
+                    false,
+                    404,
+                    'Branch not found for the provided store_id'
+                );
+            }
+
             // Create the sale record
             $sale = Sale::create([
                 'check_number' => $data['check_number'],
-                'branch_id' => $data['branch_id'],
+                'branch_id' => $branch->id,
                 'store_id' => $data['store_id'],
                 'cashier_id' => $data['cashier_id'],
                 'total_amount' => $data['total_amount'],

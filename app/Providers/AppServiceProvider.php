@@ -26,5 +26,20 @@ class AppServiceProvider extends ServiceProvider
 
         Scramble::registerJsonSpecificationRoute('api-docs.json')
             ->middleware(config('scramble.middleware', []));
+
+        // Filter routes to only show /api/v1/* endpoints
+        Scramble::routes(function ($router) {
+            return $router
+                ->whereStartsWith('api/v1');
+        });
+
+        // Remove User schema from documentation
+        Scramble::extendOpenApi(function ($openApi) {
+            $schemas = $openApi->components->schemas ?? [];
+            if (isset($schemas['User'])) {
+                unset($openApi->components->schemas['User']);
+            }
+            return $openApi;
+        });
     }
 }
