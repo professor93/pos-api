@@ -52,11 +52,11 @@ class PromoCodeController extends Controller
             'check_number' => 'required|string|unique:sales,check_number',
             'total_amount' => 'required|numeric|min:0',
             'discount_amount' => 'required|numeric|min:0',
-            'created_at' => 'required|date',
+            'sold_at' => 'required|date',
             'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|integer',
+            'items.*.product_id' => 'required|integer',
             'items.*.barcode' => 'required|string',
             'items.*.price' => 'required|numeric|min:0',
             'items.*.total_price' => 'required|numeric|min:0',
@@ -103,7 +103,7 @@ class PromoCodeController extends Controller
                 'final_amount' => $finalAmount,
                 'fiscal_sign' => $data['fiscal_sign'] ?? null,
                 'terminal_id' => $data['terminal_id'] ?? null,
-                'created_at' => $data['created_at'],
+                'sold_at' => $data['sold_at'],
                 'status' => 'completed',
             ]);
 
@@ -113,7 +113,7 @@ class PromoCodeController extends Controller
 
                 SaleItem::create([
                     'sale_id' => $sale->id,
-                    'product_id' => $item['item_id'],
+                    'product_id' => $item['product_id'],
                     'barcode' => $item['barcode'],
                     'quantity' => 1.000,
                     'unit' => 'pcs',

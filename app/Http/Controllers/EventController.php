@@ -53,6 +53,7 @@ class EventController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'products' => 'required|array|min:1',
+            'products.*.id' => 'required|integer',
             'products.*.name' => 'required|string',
             'products.*.barcode' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -91,6 +92,7 @@ class EventController extends Controller
                 }
 
                 $product = Product::create([
+                    'id' => $productData['id'],
                     'name' => $productData['name'],
                     'barcode' => $productData['barcode'],
                     'description' => $productData['description'] ?? null,
