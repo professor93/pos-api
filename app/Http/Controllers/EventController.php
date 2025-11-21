@@ -171,6 +171,7 @@ class EventController extends Controller
             'items.*.branch_id' => 'required|integer',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.previous_quantity' => 'required|numeric|min:0',
+            'items.*.total_quantity' => 'required|numeric|min:0',
             'items.*.reason' => 'nullable|string',
             'items.*.notes' => 'nullable|string',
             'user_id' => 'nullable|integer',
@@ -194,15 +195,14 @@ class EventController extends Controller
                 DB::beginTransaction();
 
                 foreach ($data['items'] as $item) {
-                    $newQuantity = $item['previous_quantity'] + $item['quantity'];
-
                     InventoryHistory::create([
                         'product_id' => $item['product_id'],
                         'branch_id' => $item['branch_id'],
                         'type' => 'added',
                         'quantity' => $item['quantity'],
                         'previous_quantity' => $item['previous_quantity'],
-                        'new_quantity' => $newQuantity,
+                        'new_quantity' => $item['total_quantity'],
+                        'total_quantity' => $item['total_quantity'],
                         'reason' => $item['reason'] ?? 'Stock replenishment',
                         'notes' => $item['notes'] ?? null,
                         'user_id' => $data['user_id'] ?? null,

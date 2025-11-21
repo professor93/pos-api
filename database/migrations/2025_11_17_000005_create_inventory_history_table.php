@@ -19,6 +19,7 @@ return new class extends Migration
             $table->decimal('quantity', 10, 3);
             $table->decimal('previous_quantity', 10, 3);
             $table->decimal('new_quantity', 10, 3);
+            $table->decimal('total_quantity', 10, 3)->nullable();
             $table->string('reason')->nullable();
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();

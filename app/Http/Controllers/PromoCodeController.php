@@ -51,7 +51,6 @@ class PromoCodeController extends Controller
         $validator = Validator::make($request->all(), [
             'check_number' => 'required|string|unique:sales,check_number',
             'total_amount' => 'required|numeric|min:0',
-            'discount_amount' => 'required|numeric|min:0',
             'sold_at' => 'required|date',
             'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
@@ -61,8 +60,6 @@ class PromoCodeController extends Controller
             'items.*.price' => 'required|numeric|min:0',
             'items.*.total_price' => 'required|numeric|min:0',
             'items.*.discount_price' => 'nullable|numeric|min:0',
-            'fiscal_sign' => 'nullable|string',
-            'terminal_id' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -79,7 +76,6 @@ class PromoCodeController extends Controller
             DB::beginTransaction();
 
             $data = $validator->validated();
-            $finalAmount = $data['total_amount'] - $data['discount_amount'];
 
             // Look up branch by branch_id (which matches branch code)
             $branch = Branch::where('code', $data['branch_id'])->first();
@@ -99,10 +95,10 @@ class PromoCodeController extends Controller
                 'store_id' => $data['branch_id'],
                 'cashier_id' => $data['cashier_id'],
                 'total_amount' => $data['total_amount'],
-                'discount_amount' => $data['discount_amount'],
-                'final_amount' => $finalAmount,
-                'fiscal_sign' => $data['fiscal_sign'] ?? null,
-                'terminal_id' => $data['terminal_id'] ?? null,
+                'discount_amount' => 0,
+                'final_amount' => $data['total_amount'],
+                'fiscal_sign' => null,
+                'terminal_id' => null,
                 'sold_at' => $data['sold_at'],
                 'status' => 'completed',
             ]);
@@ -132,8 +128,8 @@ class PromoCodeController extends Controller
             $history = PromoCodeGenerationHistory::create([
                 'sale_id' => $sale->id,
                 'promo_code' => $promoCode,
-                'amount_spent' => $finalAmount,
-                'discount_received' => $data['discount_amount'],
+                'amount_spent' => $data['total_amount'],
+                'discount_received' => 0,
                 'status' => 'generated',
             ]);
 
@@ -147,7 +143,7 @@ class PromoCodeController extends Controller
                     'sale_id' => $sale->id,
                     'check_number' => $sale->check_number,
                     'promo_code' => $promoCode,
-                    'amount_spent' => $finalAmount,
+                    'amount_spent' => $data['total_amount'],
                 ],
                 [
                     'timestamp' => now()->toISOString(),
