@@ -22,7 +22,7 @@ class Sale extends Model
         'final_amount',
         'fiscal_sign',
         'terminal_id',
-        'sale_datetime',
+        'sold_at',
         'status',
     ];
 
@@ -32,7 +32,7 @@ class Sale extends Model
             'total_amount' => 'decimal:2',
             'discount_amount' => 'decimal:2',
             'final_amount' => 'decimal:2',
-            'sale_datetime' => 'datetime',
+            'sold_at' => 'datetime',
         ];
     }
 

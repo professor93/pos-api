@@ -22,7 +22,7 @@ return new class extends Migration
             $table->decimal('final_amount', 10, 2);
             $table->string('fiscal_sign')->nullable();
             $table->string('terminal_id')->nullable();
-            $table->timestamp('sale_datetime');
+            $table->timestamp('sold_at');
             $table->enum('status', ['completed', 'cancelled', 'partially_cancelled'])->default('completed');
             $table->timestamps();
         });
