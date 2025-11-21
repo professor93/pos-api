@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Helpers\ApiResponse;
 use App\Models\InventoryHistory;
 use App\Models\Product;
+use App\Models\PromoCodeGenerationHistory;
+use App\Models\Sale;
+use App\Models\SaleItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -357,6 +360,137 @@ class EventController extends Controller
                 false,
                 500,
                 'Failed to remove inventory items',
+                null,
+                ['error' => $e->getMessage()]
+            );
+        }
+    }
+
+    /**
+     * Cancel items from a receipt and update promo code status
+     *
+     * This endpoint marks specific items in a sale as cancelled and updates the promo code status.
+     * If all items are cancelled, the sale status becomes 'cancelled', otherwise 'partially_cancelled'.
+     *
+     * @tags Events
+     *
+     * @param  Request  $request
+     * @return JsonResponse
+     *
+     * @response 200 {
+     *   "ok": true,
+     *   "code": 200,
+     *   "message": "Items cancelled successfully",
+     *   "result": {
+     *     "sale_id": 1,
+     *     "status": "partially_cancelled",
+     *     "cancelled_items_count": 2,
+     *     "total_cancelled_amount": 50.00
+     *   },
+     *   "meta": {
+     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *   }
+     * }
+     *
+     * @response 403 {
+     *   "ok": false,
+     *   "code": 403,
+     *   "message": "Store ID does not match the receipt"
+     * }
+     */
+    public function promoCodeCancelled(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'receipt_id' => 'required|integer|exists:sales,id',
+            'branch_id' => 'required|string',
+            'cashier_id' => 'required|string',
+            'cancelled_items' => 'required|array|min:1',
+            'cancelled_items.*' => 'required|integer|exists:sale_items,id',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::make(
+                false,
+                400,
+                'Validation failed',
+                null,
+                ['errors' => $validator->errors()]
+            );
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $data = $validator->validated();
+            $sale = Sale::findOrFail($data['receipt_id']);
+
+            // Verify branch_id and cashier_id match (security check)
+            if ($sale->store_id !== $data['branch_id']) {
+                return ApiResponse::make(
+                    false,
+                    403,
+                    'Branch ID does not match the receipt',
+                );
+            }
+
+            // Mark items as cancelled
+            $cancelledItems = SaleItem::whereIn('id', $data['cancelled_items'])
+                ->where('sale_id', $sale->id)
+                ->get();
+
+            if ($cancelledItems->isEmpty()) {
+                return ApiResponse::make(
+                    false,
+                    404,
+                    'No matching items found for this sale',
+                );
+            }
+
+            $totalCancelledAmount = 0;
+            foreach ($cancelledItems as $item) {
+                if (!$item->is_cancelled) {
+                    $item->is_cancelled = true;
+                    $item->save();
+                    $totalCancelledAmount += $item->final_price;
+                }
+            }
+
+            // Update sale status
+            $allItemsCancelled = $sale->items()->where('is_cancelled', false)->count() === 0;
+            $sale->status = $allItemsCancelled ? 'cancelled' : 'partially_cancelled';
+            $sale->save();
+
+            // Update promo code generation history
+            $promoHistory = PromoCodeGenerationHistory::where('sale_id', $sale->id)->first();
+            if ($promoHistory) {
+                $promoHistory->status = 'cancelled';
+                $promoHistory->notes = 'Cancelled due to item cancellation';
+                $promoHistory->save();
+            }
+
+            DB::commit();
+
+            return ApiResponse::make(
+                true,
+                200,
+                'Items cancelled successfully',
+                [
+                    'sale_id' => $sale->id,
+                    'status' => $sale->status,
+                    'cancelled_items_count' => $cancelledItems->count(),
+                    'total_cancelled_amount' => $totalCancelledAmount,
+                ],
+                [
+                    'timestamp' => now()->toISOString(),
+                ]
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return ApiResponse::make(
+                false,
+                500,
+                'Failed to cancel items',
                 null,
                 ['error' => $e->getMessage()]
             );
