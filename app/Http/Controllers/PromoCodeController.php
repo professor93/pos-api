@@ -38,7 +38,7 @@ class PromoCodeController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 201 {
+     * @response 201 scenario="Success" {
      *   "ok": true,
      *   "code": 201,
      *   "message": "Promo code generated successfully",
@@ -58,19 +58,19 @@ class PromoCodeController extends Controller
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
      * }
      *
-     * @response 404 {
+     * @response 404 scenario="Branch Not Found" {
      *   "ok": false,
      *   "code": 404,
      *   "message": "Branch not found for the provided branch_id"
      * }
      *
-     * @response 500 {
+     * @response 500 scenario="Server Error" {
      *   "ok": false,
      *   "code": 500,
      *   "message": "Failed to generate promo code"

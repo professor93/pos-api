@@ -39,7 +39,7 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 200 scenario="Success" {
      *   "ok": true,
      *   "code": 200,
      *   "message": "Product catalog event received successfully",
@@ -49,7 +49,7 @@ class EventController extends Controller
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
@@ -152,7 +152,7 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 200 scenario="Success" {
      *   "ok": true,
      *   "code": 200,
      *   "message": "Inventory items added event received successfully",
@@ -162,7 +162,7 @@ class EventController extends Controller
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
@@ -260,7 +260,7 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 200 scenario="Success" {
      *   "ok": true,
      *   "code": 200,
      *   "message": "Inventory items removed event received successfully",
@@ -270,7 +270,7 @@ class EventController extends Controller
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
@@ -363,7 +363,7 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 200 scenario="Success" {
      *   "ok": true,
      *   "code": 200,
      *   "message": "Promo code cancellation event received successfully",
@@ -373,19 +373,19 @@ class EventController extends Controller
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
      * }
      *
-     * @response 403 {
+     * @response 403 scenario="Branch Mismatch" {
      *   "ok": false,
      *   "code": 403,
      *   "message": "Branch ID does not match the receipt"
      * }
      *
-     * @response 404 {
+     * @response 404 scenario="Sale Not Found" {
      *   "ok": false,
      *   "code": 404,
      *   "message": "Sale not found"
