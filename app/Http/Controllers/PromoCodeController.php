@@ -35,11 +35,11 @@ class PromoCodeController extends Controller
      *     "codes": [
      *       {
      *         "product_id": 1,
-     *         "code": "PROMO20251117ABC123"
+     *         "code": "A5B3C7D9E1"
      *       },
      *       {
      *         "product_id": 2,
-     *         "code": "PROMO20251117ABC124"
+     *         "code": "K2M8N4P6Q0"
      *       }
      *     ]
      *   }
@@ -172,16 +172,17 @@ class PromoCodeController extends Controller
     }
 
     /**
-     * Generate a promo code based on sale data and product
-     * You can implement your own logic here
+     * Generate a random 10-character alphanumeric promo code (0-9A-Z)
      */
     private function generatePromoCodeLogic(Sale $sale, int $productId): string
     {
-        // Example: Generate a promo code based on sale ID, product ID and timestamp
-        $prefix = 'PROMO';
-        $timestamp = now()->format('Ymd');
-        $unique = strtoupper(substr(md5($sale->id . $sale->check_number . $productId), 0, 6));
+        $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $code = '';
 
-        return "{$prefix}{$timestamp}{$unique}";
+        for ($i = 0; $i < 10; $i++) {
+            $code .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        return $code;
     }
 }
