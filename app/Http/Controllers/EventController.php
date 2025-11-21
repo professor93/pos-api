@@ -356,7 +356,7 @@ class EventController extends Controller
      * @tags Events
      *
      * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
-     * @bodyParam receipt_id integer required Sale/Receipt ID to cancel items from. Example: 5
+     * @bodyParam check_number string required Receipt/check number to cancel items from. Example: CHK-20251121-001
      * @bodyParam branch_id string required Branch code/identifier (must match receipt's branch). Example: BR001
      * @bodyParam cashier_id string required Cashier identifier performing the cancellation. Example: CASH123
      * @bodyParam cancelled_items array required Array of sale item IDs to cancel (at least 1 required). Example: [1, 2, 3]
@@ -396,7 +396,7 @@ class EventController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'sequence_id' => 'required|integer',
-            'receipt_id' => 'required|integer|exists:sales,id',
+            'check_number' => 'required|string|exists:sales,check_number',
             'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
             'cancelled_items' => 'required|array|min:1',
@@ -414,7 +414,7 @@ class EventController extends Controller
         $data = $validator->validated();
 
         // Perform security checks before deferring
-        $sale = Sale::find($data['receipt_id']);
+        $sale = Sale::where('check_number', $data['check_number'])->first();
         if (!$sale) {
             return ApiResponse::make(
                 false,
@@ -437,7 +437,7 @@ class EventController extends Controller
             try {
                 DB::beginTransaction();
 
-                $sale = Sale::findOrFail($data['receipt_id']);
+                $sale = Sale::where('check_number', $data['check_number'])->firstOrFail();
 
                 // Mark items as cancelled
                 $cancelledItems = SaleItem::whereIn('id', $data['cancelled_items'])

@@ -44,7 +44,6 @@ class PromoCodeController extends Controller
      *   "code": 201,
      *   "message": "Promo code generated successfully",
      *   "result": {
-     *     "sale_id": 1,
      *     "check_number": "CHK-001",
      *     "codes": [
      *       {
@@ -175,7 +174,6 @@ class PromoCodeController extends Controller
                 201,
                 'Promo code generated successfully',
                 new PromoCodeGeneratedResource([
-                    'sale_id' => $sale->id,
                     'check_number' => $sale->check_number,
                     'codes' => $promoCodes,
                 ])
