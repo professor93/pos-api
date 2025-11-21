@@ -19,8 +19,21 @@ class PromoCodeController extends Controller
      *
      * This endpoint creates a sale record and generates a promo code for the customer.
      * The store (branch) is looked up by branch_id (matching the branch code).
+     * Each item in the sale generates a unique 10-character alphanumeric promo code.
      *
      * @tags Promo Codes
+     *
+     * @bodyParam check_number string required Unique check/receipt number. Example: CHK-20251121-001
+     * @bodyParam total_amount number required Total sale amount. Example: 150.50
+     * @bodyParam sold_at string required Sale datetime in ISO 8601 format. Example: 2025-11-21T10:30:00Z
+     * @bodyParam branch_id string required Branch code/identifier. Example: BR001
+     * @bodyParam cashier_id string required Cashier identifier. Example: CASH123
+     * @bodyParam items array required Array of sale items (at least 1 item required).
+     * @bodyParam items.*.product_id integer required Product ID. Example: 1
+     * @bodyParam items.*.barcode string required Product barcode. Example: 1234567890123
+     * @bodyParam items.*.price number required Unit price of the item. Example: 25.00
+     * @bodyParam items.*.total_price number required Total price for this item. Example: 25.00
+     * @bodyParam items.*.discount_price number Discount amount for this item. Example: 5.00
      *
      * @param  Request  $request
      * @return JsonResponse
@@ -55,6 +68,12 @@ class PromoCodeController extends Controller
      *   "ok": false,
      *   "code": 404,
      *   "message": "Branch not found for the provided branch_id"
+     * }
+     *
+     * @response 500 {
+     *   "ok": false,
+     *   "code": 500,
+     *   "message": "Failed to generate promo code"
      * }
      */
     public function generate(Request $request): JsonResponse

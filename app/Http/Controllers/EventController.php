@@ -26,6 +26,16 @@ class EventController extends Controller
      *
      * @tags Events
      *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam products array required Array of products to create (at least 1 required).
+     * @bodyParam products.*.id integer required Product ID from external system. Example: 101
+     * @bodyParam products.*.name string required Product name. Example: Coca Cola 500ml
+     * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
+     * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
+     * @bodyParam products.*.price number required Product price. Example: 2.50
+     * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
+     * @bodyParam products.*.category string Product category. Example: Beverages
+     *
      * @param  Request  $request
      * @return JsonResponse
      *
@@ -128,6 +138,17 @@ class EventController extends Controller
      *
      * @tags Events
      *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam user_id integer User ID who performed the action. Example: 5
+     * @bodyParam items array required Array of inventory items to add (at least 1 required).
+     * @bodyParam items.*.product_id integer required Product ID. Example: 101
+     * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
+     * @bodyParam items.*.quantity number required Quantity added (min: 0.001). Example: 10.500
+     * @bodyParam items.*.previous_quantity number required Previous quantity before addition. Example: 40.000
+     * @bodyParam items.*.total_quantity number required New total quantity after addition. Example: 50.500
+     * @bodyParam items.*.reason string Reason for addition. Example: Stock replenishment
+     * @bodyParam items.*.notes string Additional notes. Example: Delivery from supplier ABC
+     *
      * @param  Request  $request
      * @return JsonResponse
      *
@@ -226,6 +247,16 @@ class EventController extends Controller
      *
      * @tags Events
      *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam user_id integer User ID who performed the action. Example: 5
+     * @bodyParam items array required Array of inventory items to remove (at least 1 required).
+     * @bodyParam items.*.product_id integer required Product ID. Example: 101
+     * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
+     * @bodyParam items.*.quantity number required Quantity removed (min: 0.001). Example: 5.000
+     * @bodyParam items.*.previous_quantity number required Previous quantity before removal. Example: 50.500
+     * @bodyParam items.*.reason string Reason for removal. Example: Stock depletion
+     * @bodyParam items.*.notes string Additional notes. Example: Damaged items removed
+     *
      * @param  Request  $request
      * @return JsonResponse
      *
@@ -322,6 +353,12 @@ class EventController extends Controller
      * If all items are cancelled, the sale status becomes 'cancelled', otherwise 'partially_cancelled'.
      *
      * @tags Events
+     *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam receipt_id integer required Sale/Receipt ID to cancel items from. Example: 5
+     * @bodyParam branch_id string required Branch code/identifier (must match receipt's branch). Example: BR001
+     * @bodyParam cashier_id string required Cashier identifier performing the cancellation. Example: CASH123
+     * @bodyParam cancelled_items array required Array of sale item IDs to cancel (at least 1 required). Example: [1, 2, 3]
      *
      * @param  Request  $request
      * @return JsonResponse
