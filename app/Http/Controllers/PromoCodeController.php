@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Resources\PromoCodeGeneratedResource;
 use App\Models\Branch;
 use App\Models\PromoCodeGenerationHistory;
 use App\Models\Sale;
@@ -173,11 +174,11 @@ class PromoCodeController extends Controller
                 true,
                 201,
                 'Promo code generated successfully',
-                [
+                new PromoCodeGeneratedResource([
                     'sale_id' => $sale->id,
                     'check_number' => $sale->check_number,
                     'codes' => $promoCodes,
-                ]
+                ])
             );
         } catch (\Exception $e) {
             DB::rollBack();

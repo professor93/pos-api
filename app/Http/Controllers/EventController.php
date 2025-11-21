@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Resources\EventReceivedResource;
 use App\Models\InventoryHistory;
 use App\Models\Product;
 use App\Models\PromoCodeGenerationHistory;
@@ -121,10 +122,10 @@ class EventController extends Controller
             true,
             200,
             'Product catalog event received successfully',
-            [
+            new EventReceivedResource([
                 'message' => 'Event will be processed',
                 'products_count' => count($data['products']),
-            ]
+            ])
         );
     }
 
@@ -230,10 +231,10 @@ class EventController extends Controller
             true,
             200,
             'Inventory items added event received successfully',
-            [
+            new EventReceivedResource([
                 'message' => 'Event will be processed',
                 'items_count' => count($data['items']),
-            ]
+            ])
         );
     }
 
@@ -338,10 +339,10 @@ class EventController extends Controller
             true,
             200,
             'Inventory items removed event received successfully',
-            [
+            new EventReceivedResource([
                 'message' => 'Event will be processed',
                 'items_count' => count($data['items']),
-            ]
+            ])
         );
     }
 
@@ -480,10 +481,10 @@ class EventController extends Controller
             true,
             200,
             'Promo code cancellation event received successfully',
-            [
+            new EventReceivedResource([
                 'message' => 'Event will be processed',
                 'cancelled_items_count' => count($data['cancelled_items']),
-            ]
+            ])
         );
     }
 }
