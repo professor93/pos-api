@@ -20,6 +20,7 @@ class Product extends Model
         'category',
         'is_active',
         'status',
+        'sequence_id',
     ];
 
     protected function casts(): array

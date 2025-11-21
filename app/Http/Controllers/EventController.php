@@ -54,6 +54,7 @@ class EventController extends Controller
     public function productCatalogCreated(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'sequence_id' => 'required|integer',
             'products' => 'required|array|min:1',
             'products.*.id' => 'required|integer',
             'products.*.name' => 'required|string',
@@ -99,6 +100,7 @@ class EventController extends Controller
                         'category' => $productData['category'] ?? null,
                         'is_active' => true,
                         'status' => 'new',
+                        'sequence_id' => $data['sequence_id'],
                     ]);
                 }
 
@@ -163,6 +165,7 @@ class EventController extends Controller
     public function inventoryItemsAdded(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'sequence_id' => 'required|integer',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer',
             'items.*.branch_id' => 'required|integer',
@@ -204,6 +207,7 @@ class EventController extends Controller
                         'notes' => $item['notes'] ?? null,
                         'user_id' => $data['user_id'] ?? null,
                         'status' => 'new',
+                        'sequence_id' => $data['sequence_id'],
                     ]);
                 }
 
@@ -268,6 +272,7 @@ class EventController extends Controller
     public function inventoryItemsRemoved(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'sequence_id' => 'required|integer',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer',
             'items.*.branch_id' => 'required|integer',
@@ -309,6 +314,7 @@ class EventController extends Controller
                         'notes' => $item['notes'] ?? null,
                         'user_id' => $data['user_id'] ?? null,
                         'status' => 'new',
+                        'sequence_id' => $data['sequence_id'],
                     ]);
                 }
 
@@ -372,6 +378,7 @@ class EventController extends Controller
     public function promoCodeCancelled(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'sequence_id' => 'required|integer',
             'receipt_id' => 'required|integer|exists:sales,id',
             'branch_id' => 'required|string',
             'cashier_id' => 'required|string',

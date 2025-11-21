@@ -23,6 +23,7 @@ class InventoryHistory extends Model
         'notes',
         'user_id',
         'status',
+        'sequence_id',
     ];
 
     protected function casts(): array
