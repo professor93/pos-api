@@ -14,11 +14,10 @@ class EventReceivedResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return [
-            'message' => $this->resource['message'],
+        return array_filter([
             'products_count' => $this->resource['products_count'] ?? null,
             'items_count' => $this->resource['items_count'] ?? null,
             'cancelled_items_count' => $this->resource['cancelled_items_count'] ?? null,
-        ];
+        ], fn($value) => $value !== null);
     }
 }

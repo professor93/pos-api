@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 use function Illuminate\Support\defer;
 
@@ -45,7 +46,6 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Product catalog event received successfully",
      *   "result": {
-     *     "message": "Event will be processed",
      *     "products_count": 2
      *   }
      * }
@@ -79,9 +79,10 @@ class EventController extends Controller
         }
 
         $data = $validator->validated();
+        $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data) {
+        defer(function () use ($data, $processId) {
             try {
                 DB::beginTransaction();
 
@@ -123,7 +124,6 @@ class EventController extends Controller
             200,
             'Product catalog event received successfully',
             new EventReceivedResource([
-                'message' => 'Event will be processed',
                 'products_count' => count($data['products']),
             ])
         );
@@ -158,7 +158,6 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Inventory items added event received successfully",
      *   "result": {
-     *     "message": "Event will be processed",
      *     "items_count": 1
      *   }
      * }
@@ -193,9 +192,10 @@ class EventController extends Controller
         }
 
         $data = $validator->validated();
+        $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data) {
+        defer(function () use ($data, $processId) {
             try {
                 DB::beginTransaction();
 
@@ -232,7 +232,6 @@ class EventController extends Controller
             200,
             'Inventory items added event received successfully',
             new EventReceivedResource([
-                'message' => 'Event will be processed',
                 'items_count' => count($data['items']),
             ])
         );
@@ -266,7 +265,6 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Inventory items removed event received successfully",
      *   "result": {
-     *     "message": "Event will be processed",
      *     "items_count": 1
      *   }
      * }
@@ -300,9 +298,10 @@ class EventController extends Controller
         }
 
         $data = $validator->validated();
+        $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data) {
+        defer(function () use ($data, $processId) {
             try {
                 DB::beginTransaction();
 
@@ -340,7 +339,6 @@ class EventController extends Controller
             200,
             'Inventory items removed event received successfully',
             new EventReceivedResource([
-                'message' => 'Event will be processed',
                 'items_count' => count($data['items']),
             ])
         );
@@ -369,7 +367,6 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Promo code cancellation event received successfully",
      *   "result": {
-     *     "message": "Event will be processed",
      *     "cancelled_items_count": 2
      *   }
      * }
@@ -412,6 +409,7 @@ class EventController extends Controller
         }
 
         $data = $validator->validated();
+        $processId = Str::uuid()->toString();
 
         // Perform security checks before deferring
         $sale = Sale::where('check_number', $data['check_number'])->first();
@@ -433,7 +431,7 @@ class EventController extends Controller
         }
 
         // Defer processing to after response is sent
-        defer(function () use ($data) {
+        defer(function () use ($data, $processId) {
             try {
                 DB::beginTransaction();
 
@@ -482,7 +480,6 @@ class EventController extends Controller
             200,
             'Promo code cancellation event received successfully',
             new EventReceivedResource([
-                'message' => 'Event will be processed',
                 'cancelled_items_count' => count($data['cancelled_items']),
             ])
         );
