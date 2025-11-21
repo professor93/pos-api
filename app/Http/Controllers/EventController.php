@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Resources\EventReceivedResource;
 use App\Models\InventoryHistory;
 use App\Models\Product;
 use App\Models\PromoCodeGenerationHistory;
@@ -12,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 use function Illuminate\Support\defer;
 
@@ -26,20 +28,29 @@ class EventController extends Controller
      *
      * @tags Events
      *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam products array required Array of products to create (at least 1 required).
+     * @bodyParam products.*.id integer required Product ID from external system. Example: 101
+     * @bodyParam products.*.name string required Product name. Example: Coca Cola 500ml
+     * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
+     * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
+     * @bodyParam products.*.price number required Product price. Example: 2.50
+     * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
+     * @bodyParam products.*.category string Product category. Example: Beverages
+     *
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 200 scenario="Success" {
      *   "ok": true,
      *   "code": 200,
      *   "message": "Product catalog event received successfully",
      *   "result": {
-     *     "message": "Event will be processed",
      *     "products_count": 2
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
@@ -68,9 +79,10 @@ class EventController extends Controller
         }
 
         $data = $validator->validated();
+        $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data) {
+        defer(function () use ($data, $processId) {
             try {
                 DB::beginTransaction();
 
@@ -111,10 +123,9 @@ class EventController extends Controller
             true,
             200,
             'Product catalog event received successfully',
-            [
-                'message' => 'Event will be processed',
+            new EventReceivedResource([
                 'products_count' => count($data['products']),
-            ]
+            ])
         );
     }
 
@@ -128,20 +139,30 @@ class EventController extends Controller
      *
      * @tags Events
      *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam user_id integer User ID who performed the action. Example: 5
+     * @bodyParam items array required Array of inventory items to add (at least 1 required).
+     * @bodyParam items.*.product_id integer required Product ID. Example: 101
+     * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
+     * @bodyParam items.*.quantity number required Quantity added (min: 0.001). Example: 10.500
+     * @bodyParam items.*.previous_quantity number required Previous quantity before addition. Example: 40.000
+     * @bodyParam items.*.total_quantity number required New total quantity after addition. Example: 50.500
+     * @bodyParam items.*.reason string Reason for addition. Example: Stock replenishment
+     * @bodyParam items.*.notes string Additional notes. Example: Delivery from supplier ABC
+     *
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 200 scenario="Success" {
      *   "ok": true,
      *   "code": 200,
      *   "message": "Inventory items added event received successfully",
      *   "result": {
-     *     "message": "Event will be processed",
      *     "items_count": 1
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
@@ -171,9 +192,10 @@ class EventController extends Controller
         }
 
         $data = $validator->validated();
+        $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data) {
+        defer(function () use ($data, $processId) {
             try {
                 DB::beginTransaction();
 
@@ -209,10 +231,9 @@ class EventController extends Controller
             true,
             200,
             'Inventory items added event received successfully',
-            [
-                'message' => 'Event will be processed',
+            new EventReceivedResource([
                 'items_count' => count($data['items']),
-            ]
+            ])
         );
     }
 
@@ -226,20 +247,29 @@ class EventController extends Controller
      *
      * @tags Events
      *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam user_id integer User ID who performed the action. Example: 5
+     * @bodyParam items array required Array of inventory items to remove (at least 1 required).
+     * @bodyParam items.*.product_id integer required Product ID. Example: 101
+     * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
+     * @bodyParam items.*.quantity number required Quantity removed (min: 0.001). Example: 5.000
+     * @bodyParam items.*.previous_quantity number required Previous quantity before removal. Example: 50.500
+     * @bodyParam items.*.reason string Reason for removal. Example: Stock depletion
+     * @bodyParam items.*.notes string Additional notes. Example: Damaged items removed
+     *
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 200 scenario="Success" {
      *   "ok": true,
      *   "code": 200,
      *   "message": "Inventory items removed event received successfully",
      *   "result": {
-     *     "message": "Event will be processed",
      *     "items_count": 1
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
@@ -268,9 +298,10 @@ class EventController extends Controller
         }
 
         $data = $validator->validated();
+        $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data) {
+        defer(function () use ($data, $processId) {
             try {
                 DB::beginTransaction();
 
@@ -307,10 +338,9 @@ class EventController extends Controller
             true,
             200,
             'Inventory items removed event received successfully',
-            [
-                'message' => 'Event will be processed',
+            new EventReceivedResource([
                 'items_count' => count($data['items']),
-            ]
+            ])
         );
     }
 
@@ -323,32 +353,39 @@ class EventController extends Controller
      *
      * @tags Events
      *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam check_number string required Receipt/check number to cancel items from. Example: CHK-20251121-001
+     * @bodyParam branch_id string required Branch code/identifier (must match receipt's branch). Example: BR001
+     * @bodyParam cashier_id string required Cashier identifier performing the cancellation. Example: CASH123
+     * @bodyParam cancelled_items array required Array of items to cancel (at least 1 required).
+     * @bodyParam cancelled_items.*.product_id integer required Product ID. Example: 1
+     * @bodyParam cancelled_items.*.price number required Item price. Example: 25.00
+     *
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 200 scenario="Success" {
      *   "ok": true,
      *   "code": 200,
      *   "message": "Promo code cancellation event received successfully",
      *   "result": {
-     *     "message": "Event will be processed",
      *     "cancelled_items_count": 2
      *   }
      * }
      *
-     * @response 400 {
+     * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
      *   "message": "Validation failed"
      * }
      *
-     * @response 403 {
+     * @response 403 scenario="Branch Mismatch" {
      *   "ok": false,
      *   "code": 403,
      *   "message": "Branch ID does not match the receipt"
      * }
      *
-     * @response 404 {
+     * @response 404 scenario="Sale Not Found" {
      *   "ok": false,
      *   "code": 404,
      *   "message": "Sale not found"
@@ -358,11 +395,12 @@ class EventController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'sequence_id' => 'required|integer',
-            'receipt_id' => 'required|integer|exists:sales,id',
+            'check_number' => 'required|string|exists:sales,check_number',
             'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
             'cancelled_items' => 'required|array|min:1',
-            'cancelled_items.*' => 'required|integer|exists:sale_items,id',
+            'cancelled_items.*.product_id' => 'required|integer',
+            'cancelled_items.*.price' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -374,9 +412,10 @@ class EventController extends Controller
         }
 
         $data = $validator->validated();
+        $processId = Str::uuid()->toString();
 
         // Perform security checks before deferring
-        $sale = Sale::find($data['receipt_id']);
+        $sale = Sale::where('check_number', $data['check_number'])->first();
         if (!$sale) {
             return ApiResponse::make(
                 false,
@@ -395,24 +434,26 @@ class EventController extends Controller
         }
 
         // Defer processing to after response is sent
-        defer(function () use ($data) {
+        defer(function () use ($data, $processId) {
             try {
                 DB::beginTransaction();
 
-                $sale = Sale::findOrFail($data['receipt_id']);
+                $sale = Sale::where('check_number', $data['check_number'])->firstOrFail();
 
-                // Mark items as cancelled
-                $cancelledItems = SaleItem::whereIn('id', $data['cancelled_items'])
-                    ->where('sale_id', $sale->id)
-                    ->get();
+                // Mark items as cancelled by matching product_id
+                foreach ($data['cancelled_items'] as $cancelItem) {
+                    $saleItem = SaleItem::where('sale_id', $sale->id)
+                        ->where('product_id', $cancelItem['product_id'])
+                        ->where('is_cancelled', false)
+                        ->first();
 
-                if (!$cancelledItems->isEmpty()) {
-                    foreach ($cancelledItems as $item) {
-                        if (!$item->is_cancelled) {
-                            $item->is_cancelled = true;
-                            $item->save();
-                        }
+                    if ($saleItem) {
+                        $saleItem->is_cancelled = true;
+                        $saleItem->save();
                     }
+                }
+
+                if (count($data['cancelled_items']) > 0) {
 
                     // Update sale status
                     $allItemsCancelled = $sale->items()->where('is_cancelled', false)->count() === 0;
@@ -443,10 +484,9 @@ class EventController extends Controller
             true,
             200,
             'Promo code cancellation event received successfully',
-            [
-                'message' => 'Event will be processed',
+            new EventReceivedResource([
                 'cancelled_items_count' => count($data['cancelled_items']),
-            ]
+            ])
         );
     }
 }
