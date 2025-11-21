@@ -52,8 +52,8 @@ class PromoCodeController extends Controller
             'check_number' => 'required|string|unique:sales,check_number',
             'total_amount' => 'required|numeric|min:0',
             'discount_amount' => 'required|numeric|min:0',
-            'sale_datetime' => 'required|date',
-            'store_id' => 'required|string',
+            'created_at' => 'required|date',
+            'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|integer',
@@ -82,14 +82,14 @@ class PromoCodeController extends Controller
             $data = $validator->validated();
             $finalAmount = $data['total_amount'] - $data['discount_amount'];
 
-            // Look up branch by store_id (which matches branch code)
-            $branch = Branch::where('code', $data['store_id'])->first();
+            // Look up branch by branch_id (which matches branch code)
+            $branch = Branch::where('code', $data['branch_id'])->first();
 
             if (!$branch) {
                 return ApiResponse::make(
                     false,
                     404,
-                    'Branch not found for the provided store_id'
+                    'Branch not found for the provided branch_id'
                 );
             }
 
@@ -97,14 +97,14 @@ class PromoCodeController extends Controller
             $sale = Sale::create([
                 'check_number' => $data['check_number'],
                 'branch_id' => $branch->id,
-                'store_id' => $data['store_id'],
+                'store_id' => $data['branch_id'],
                 'cashier_id' => $data['cashier_id'],
                 'total_amount' => $data['total_amount'],
                 'discount_amount' => $data['discount_amount'],
                 'final_amount' => $finalAmount,
                 'fiscal_sign' => $data['fiscal_sign'] ?? null,
                 'terminal_id' => $data['terminal_id'] ?? null,
-                'sale_datetime' => $data['sale_datetime'],
+                'created_at' => $data['created_at'],
                 'status' => 'completed',
             ]);
 

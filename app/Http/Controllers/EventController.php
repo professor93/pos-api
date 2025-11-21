@@ -402,7 +402,7 @@ class EventController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'receipt_id' => 'required|integer|exists:sales,id',
-            'store_id' => 'required|string',
+            'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
             'cancelled_items' => 'required|array|min:1',
             'cancelled_items.*' => 'required|integer|exists:sale_items,id',
@@ -424,12 +424,12 @@ class EventController extends Controller
             $data = $validator->validated();
             $sale = Sale::findOrFail($data['receipt_id']);
 
-            // Verify store_id and cashier_id match (security check)
-            if ($sale->store_id !== $data['store_id']) {
+            // Verify branch_id and cashier_id match (security check)
+            if ($sale->store_id !== $data['branch_id']) {
                 return ApiResponse::make(
                     false,
                     403,
-                    'Store ID does not match the receipt',
+                    'Branch ID does not match the receipt',
                 );
             }
 
