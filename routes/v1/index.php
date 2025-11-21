@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Route;
 // Promo Code Routes
 Route::prefix('promo-codes')->group(function () {
     Route::post('/generate', [PromoCodeController::class, 'generate']);
-    Route::post('/cancel', [PromoCodeController::class, 'cancel']);
 });
 
 // Event Routes
@@ -20,4 +19,7 @@ Route::prefix('events')->group(function () {
         Route::post('/added', [EventController::class, 'inventoryItemsAdded']);
         Route::post('/removed', [EventController::class, 'inventoryItemsRemoved']);
     });
+
+    // Promo Code Events
+    Route::post('/promo-codes/cancelled', [EventController::class, 'promoCodeCancelled']);
 });
