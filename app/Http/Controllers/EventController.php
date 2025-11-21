@@ -29,9 +29,9 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 202 {
+     * @response 200 {
      *   "ok": true,
-     *   "code": 202,
+     *   "code": 200,
      *   "message": "Product catalog event received successfully",
      *   "result": {
      *     "message": "Event will be processed",
@@ -109,7 +109,7 @@ class EventController extends Controller
 
         return ApiResponse::make(
             true,
-            202,
+            200,
             'Product catalog event received successfully',
             [
                 'message' => 'Event will be processed',
@@ -131,9 +131,9 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 202 {
+     * @response 200 {
      *   "ok": true,
-     *   "code": 202,
+     *   "code": 200,
      *   "message": "Inventory items added event received successfully",
      *   "result": {
      *     "message": "Event will be processed",
@@ -207,7 +207,7 @@ class EventController extends Controller
 
         return ApiResponse::make(
             true,
-            202,
+            200,
             'Inventory items added event received successfully',
             [
                 'message' => 'Event will be processed',
@@ -229,9 +229,9 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 202 {
+     * @response 200 {
      *   "ok": true,
-     *   "code": 202,
+     *   "code": 200,
      *   "message": "Inventory items removed event received successfully",
      *   "result": {
      *     "message": "Event will be processed",
@@ -305,7 +305,7 @@ class EventController extends Controller
 
         return ApiResponse::make(
             true,
-            202,
+            200,
             'Inventory items removed event received successfully',
             [
                 'message' => 'Event will be processed',
@@ -326,9 +326,9 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 202 {
+     * @response 200 {
      *   "ok": true,
-     *   "code": 202,
+     *   "code": 200,
      *   "message": "Promo code cancellation event received successfully",
      *   "result": {
      *     "message": "Event will be processed",
@@ -441,7 +441,7 @@ class EventController extends Controller
 
         return ApiResponse::make(
             true,
-            202,
+            200,
             'Promo code cancellation event received successfully',
             [
                 'message' => 'Event will be processed',
