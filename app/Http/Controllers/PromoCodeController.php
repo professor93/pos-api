@@ -30,8 +30,7 @@ class PromoCodeController extends Controller
      * @bodyParam branch_id string required Branch code/identifier. Example: BR001
      * @bodyParam cashier_id string required Cashier identifier. Example: CASH123
      * @bodyParam items array required Array of sale items (at least 1 item required).
-     * @bodyParam items.*.product_id integer required Product ID. Example: 1
-     * @bodyParam items.*.barcode string required Product barcode. Example: 1234567890123
+     * @bodyParam items.*.product_id string required Product ID. Example: PROD-001
      * @bodyParam items.*.price number required Unit price of the item. Example: 25.00
      *
      * @param  Request  $request
@@ -45,11 +44,11 @@ class PromoCodeController extends Controller
      *     "check_number": "CHK-001",
      *     "codes": [
      *       {
-     *         "product_id": 1,
+     *         "product_id": "PROD-001",
      *         "code": "A5B3C7D9E1"
      *       },
      *       {
-     *         "product_id": 2,
+     *         "product_id": "PROD-002",
      *         "code": "K2M8N4P6Q0"
      *       }
      *     ]
@@ -83,8 +82,7 @@ class PromoCodeController extends Controller
             'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer',
-            'items.*.barcode' => 'required|string',
+            'items.*.product_id' => 'required|string',
             'items.*.price' => 'required|numeric|min:0',
         ]);
 
@@ -133,7 +131,7 @@ class PromoCodeController extends Controller
                 SaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $item['product_id'],
-                    'barcode' => $item['barcode'],
+                    'barcode' => '',
                     'quantity' => 1.000,
                     'unit' => 'pcs',
                     'unit_price' => $item['price'],
@@ -186,7 +184,7 @@ class PromoCodeController extends Controller
     /**
      * Generate a random 10-character alphanumeric promo code (0-9A-Z)
      */
-    private function generatePromoCodeLogic(Sale $sale, int $productId): string
+    private function generatePromoCodeLogic(Sale $sale, string $productId): string
     {
         $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $code = '';

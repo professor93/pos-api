@@ -30,7 +30,7 @@ class EventController extends Controller
      *
      * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
      * @bodyParam products array required Array of products to create (at least 1 required).
-     * @bodyParam products.*.id integer required Product ID from external system. Example: 101
+     * @bodyParam products.*.id string required Product ID from external system. Example: PROD-101
      * @bodyParam products.*.name string required Product name. Example: Coca Cola 500ml
      * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
      * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
@@ -61,7 +61,7 @@ class EventController extends Controller
         $validator = Validator::make($request->all(), [
             'sequence_id' => 'required|integer',
             'products' => 'required|array|min:1',
-            'products.*.id' => 'required|integer',
+            'products.*.id' => 'required|string',
             'products.*.name' => 'required|string',
             'products.*.barcode' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -142,7 +142,7 @@ class EventController extends Controller
      * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
      * @bodyParam user_id integer User ID who performed the action. Example: 5
      * @bodyParam items array required Array of inventory items to add (at least 1 required).
-     * @bodyParam items.*.product_id integer required Product ID. Example: 101
+     * @bodyParam items.*.product_id string required Product ID. Example: PROD-101
      * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
      * @bodyParam items.*.quantity number required Quantity added (min: 0.001). Example: 10.500
      * @bodyParam items.*.previous_quantity number required Previous quantity before addition. Example: 40.000
@@ -173,7 +173,7 @@ class EventController extends Controller
         $validator = Validator::make($request->all(), [
             'sequence_id' => 'required|integer',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer',
+            'items.*.product_id' => 'required|string',
             'items.*.branch_id' => 'required|integer',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.previous_quantity' => 'required|numeric|min:0',
@@ -250,7 +250,7 @@ class EventController extends Controller
      * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
      * @bodyParam user_id integer User ID who performed the action. Example: 5
      * @bodyParam items array required Array of inventory items to remove (at least 1 required).
-     * @bodyParam items.*.product_id integer required Product ID. Example: 101
+     * @bodyParam items.*.product_id string required Product ID. Example: PROD-101
      * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
      * @bodyParam items.*.quantity number required Quantity removed (min: 0.001). Example: 5.000
      * @bodyParam items.*.previous_quantity number required Previous quantity before removal. Example: 50.500
@@ -280,7 +280,7 @@ class EventController extends Controller
         $validator = Validator::make($request->all(), [
             'sequence_id' => 'required|integer',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer',
+            'items.*.product_id' => 'required|string',
             'items.*.branch_id' => 'required|integer',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.previous_quantity' => 'required|numeric|min:0',
@@ -358,7 +358,7 @@ class EventController extends Controller
      * @bodyParam branch_id string required Branch code/identifier (must match receipt's branch). Example: BR001
      * @bodyParam cashier_id string required Cashier identifier performing the cancellation. Example: CASH123
      * @bodyParam cancelled_items array required Array of items to cancel (at least 1 required).
-     * @bodyParam cancelled_items.*.product_id integer required Product ID. Example: 1
+     * @bodyParam cancelled_items.*.product_id string required Product ID. Example: PROD-001
      * @bodyParam cancelled_items.*.price number required Item price. Example: 25.00
      *
      * @param  Request  $request
@@ -399,7 +399,7 @@ class EventController extends Controller
             'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
             'cancelled_items' => 'required|array|min:1',
-            'cancelled_items.*.product_id' => 'required|integer',
+            'cancelled_items.*.product_id' => 'required|string',
             'cancelled_items.*.price' => 'required|numeric|min:0',
         ]);
 
