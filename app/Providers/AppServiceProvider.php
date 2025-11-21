@@ -30,10 +30,10 @@ class AppServiceProvider extends ServiceProvider
         Scramble::registerJsonSpecificationRoute('api-docs.json')
             ->middleware(config('scramble.middleware', []));
 
-        // Filter routes to only show /api/v1/* endpoints
+        // Filter routes to only show /api/v1/pos/* endpoints
         Scramble::configure()
             ->routes(function (Route $route) {
-                return Str::startsWith($route->uri, 'api/v1');
+                return Str::startsWith($route->uri, 'api/v1/pos');
             });
 
         // Remove User schema from documentation
