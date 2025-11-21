@@ -22,33 +22,27 @@ class EventController extends Controller
      *
      * This endpoint processes product catalog events from external systems.
      * Products are created with status='new' for later processing.
-     * Duplicate barcodes are gracefully handled and reported in the response.
+     * Processing is deferred to after the HTTP response is sent.
      *
      * @tags Events
      *
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 201 {
+     * @response 202 {
      *   "ok": true,
-     *   "code": 201,
-     *   "message": "Product catalog event processed",
+     *   "code": 202,
+     *   "message": "Product catalog event received successfully",
      *   "result": {
-     *     "products": [
-     *       {
-     *         "id": 1,
-     *         "name": "Product A",
-     *         "barcode": "123456",
-     *         "status": "new"
-     *       }
-     *     ],
-     *     "created_count": 1,
-     *     "skipped_count": 0,
-     *     "skipped": []
-     *   },
-     *   "meta": {
-     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *     "message": "Event will be processed",
+     *     "products_count": 2
      *   }
+     * }
+     *
+     * @response 400 {
+     *   "ok": false,
+     *   "code": 400,
+     *   "message": "Validation failed"
      * }
      */
     public function productCatalogCreated(Request $request): JsonResponse
@@ -69,9 +63,7 @@ class EventController extends Controller
             return ApiResponse::make(
                 false,
                 400,
-                'Validation failed',
-                null,
-                ['errors' => $validator->errors()]
+                'Validation failed'
             );
         }
 
@@ -122,9 +114,6 @@ class EventController extends Controller
             [
                 'message' => 'Event will be processed',
                 'products_count' => count($data['products']),
-            ],
-            [
-                'timestamp' => now()->toISOString(),
             ]
         );
     }
@@ -134,6 +123,7 @@ class EventController extends Controller
      *
      * This endpoint processes inventory addition events from external systems.
      * Records are created with status='new' for later processing.
+     * Processing is deferred to after the HTTP response is sent.
      * No validation is performed on product_id or branch_id existence.
      *
      * @tags Events
@@ -141,25 +131,20 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 201 {
+     * @response 202 {
      *   "ok": true,
-     *   "code": 201,
-     *   "message": "Inventory items added successfully",
+     *   "code": 202,
+     *   "message": "Inventory items added event received successfully",
      *   "result": {
-     *     "inventory_records": [
-     *       {
-     *         "id": 1,
-     *         "product_id": 1,
-     *         "branch_id": 1,
-     *         "quantity_added": 10.5,
-     *         "new_quantity": 50.5
-     *       }
-     *     ],
-     *     "count": 1
-     *   },
-     *   "meta": {
-     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *     "message": "Event will be processed",
+     *     "items_count": 1
      *   }
+     * }
+     *
+     * @response 400 {
+     *   "ok": false,
+     *   "code": 400,
+     *   "message": "Validation failed"
      * }
      */
     public function inventoryItemsAdded(Request $request): JsonResponse
@@ -181,9 +166,7 @@ class EventController extends Controller
             return ApiResponse::make(
                 false,
                 400,
-                'Validation failed',
-                null,
-                ['errors' => $validator->errors()]
+                'Validation failed'
             );
         }
 
@@ -229,9 +212,6 @@ class EventController extends Controller
             [
                 'message' => 'Event will be processed',
                 'items_count' => count($data['items']),
-            ],
-            [
-                'timestamp' => now()->toISOString(),
             ]
         );
     }
@@ -241,6 +221,7 @@ class EventController extends Controller
      *
      * This endpoint processes inventory removal events from external systems.
      * Records are created with status='new' for later processing.
+     * Processing is deferred to after the HTTP response is sent.
      * No validation is performed on product_id or branch_id existence.
      *
      * @tags Events
@@ -248,25 +229,20 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 201 {
+     * @response 202 {
      *   "ok": true,
-     *   "code": 201,
-     *   "message": "Inventory items removed successfully",
+     *   "code": 202,
+     *   "message": "Inventory items removed event received successfully",
      *   "result": {
-     *     "inventory_records": [
-     *       {
-     *         "id": 2,
-     *         "product_id": 1,
-     *         "branch_id": 1,
-     *         "quantity_removed": 5.0,
-     *         "new_quantity": 45.5
-     *       }
-     *     ],
-     *     "count": 1
-     *   },
-     *   "meta": {
-     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *     "message": "Event will be processed",
+     *     "items_count": 1
      *   }
+     * }
+     *
+     * @response 400 {
+     *   "ok": false,
+     *   "code": 400,
+     *   "message": "Validation failed"
      * }
      */
     public function inventoryItemsRemoved(Request $request): JsonResponse
@@ -287,9 +263,7 @@ class EventController extends Controller
             return ApiResponse::make(
                 false,
                 400,
-                'Validation failed',
-                null,
-                ['errors' => $validator->errors()]
+                'Validation failed'
             );
         }
 
@@ -336,9 +310,6 @@ class EventController extends Controller
             [
                 'message' => 'Event will be processed',
                 'items_count' => count($data['items']),
-            ],
-            [
-                'timestamp' => now()->toISOString(),
             ]
         );
     }
@@ -347,6 +318,7 @@ class EventController extends Controller
      * Cancel items from a receipt and update promo code status
      *
      * This endpoint marks specific items in a sale as cancelled and updates the promo code status.
+     * Processing is deferred to after the HTTP response is sent.
      * If all items are cancelled, the sale status becomes 'cancelled', otherwise 'partially_cancelled'.
      *
      * @tags Events
@@ -354,25 +326,32 @@ class EventController extends Controller
      * @param  Request  $request
      * @return JsonResponse
      *
-     * @response 200 {
+     * @response 202 {
      *   "ok": true,
-     *   "code": 200,
-     *   "message": "Items cancelled successfully",
+     *   "code": 202,
+     *   "message": "Promo code cancellation event received successfully",
      *   "result": {
-     *     "sale_id": 1,
-     *     "status": "partially_cancelled",
-     *     "cancelled_items_count": 2,
-     *     "total_cancelled_amount": 50.00
-     *   },
-     *   "meta": {
-     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *     "message": "Event will be processed",
+     *     "cancelled_items_count": 2
      *   }
+     * }
+     *
+     * @response 400 {
+     *   "ok": false,
+     *   "code": 400,
+     *   "message": "Validation failed"
      * }
      *
      * @response 403 {
      *   "ok": false,
      *   "code": 403,
-     *   "message": "Store ID does not match the receipt"
+     *   "message": "Branch ID does not match the receipt"
+     * }
+     *
+     * @response 404 {
+     *   "ok": false,
+     *   "code": 404,
+     *   "message": "Sale not found"
      * }
      */
     public function promoCodeCancelled(Request $request): JsonResponse
@@ -390,9 +369,7 @@ class EventController extends Controller
             return ApiResponse::make(
                 false,
                 400,
-                'Validation failed',
-                null,
-                ['errors' => $validator->errors()]
+                'Validation failed'
             );
         }
 
@@ -469,9 +446,6 @@ class EventController extends Controller
             [
                 'message' => 'Event will be processed',
                 'cancelled_items_count' => count($data['cancelled_items']),
-            ],
-            [
-                'timestamp' => now()->toISOString(),
             ]
         );
     }

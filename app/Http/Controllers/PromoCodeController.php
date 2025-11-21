@@ -18,7 +18,7 @@ class PromoCodeController extends Controller
      * Generate a promo code based on a sales receipt
      *
      * This endpoint creates a sale record and generates a promo code for the customer.
-     * The store (branch) is looked up by store_id (matching the branch code).
+     * The store (branch) is looked up by branch_id (matching the branch code).
      *
      * @tags Promo Codes
      *
@@ -32,18 +32,29 @@ class PromoCodeController extends Controller
      *   "result": {
      *     "sale_id": 1,
      *     "check_number": "CHK-001",
-     *     "promo_code": "PROMO20251117ABC123",
-     *     "amount_spent": 90.00
-     *   },
-     *   "meta": {
-     *     "timestamp": "2025-11-17T10:00:00.000000Z"
+     *     "codes": [
+     *       {
+     *         "product_id": 1,
+     *         "code": "PROMO20251117ABC123"
+     *       },
+     *       {
+     *         "product_id": 2,
+     *         "code": "PROMO20251117ABC124"
+     *       }
+     *     ]
      *   }
+     * }
+     *
+     * @response 400 {
+     *   "ok": false,
+     *   "code": 400,
+     *   "message": "Validation failed"
      * }
      *
      * @response 404 {
      *   "ok": false,
      *   "code": 404,
-     *   "message": "Branch not found for the provided store_id"
+     *   "message": "Branch not found for the provided branch_id"
      * }
      */
     public function generate(Request $request): JsonResponse
@@ -66,9 +77,7 @@ class PromoCodeController extends Controller
             return ApiResponse::make(
                 false,
                 400,
-                'Validation failed',
-                null,
-                ['errors' => $validator->errors()]
+                'Validation failed'
             );
         }
 
@@ -103,7 +112,8 @@ class PromoCodeController extends Controller
                 'status' => 'completed',
             ]);
 
-            // Create sale items
+            // Create sale items and generate promo codes
+            $promoCodes = [];
             foreach ($data['items'] as $item) {
                 $itemFinalPrice = $item['total_price'] - ($item['discount_price'] ?? 0);
 
@@ -119,19 +129,24 @@ class PromoCodeController extends Controller
                     'final_price' => $itemFinalPrice,
                     'is_cancelled' => false,
                 ]);
+
+                // Generate promo code for each item
+                $promoCode = $this->generatePromoCodeLogic($sale, $item['product_id']);
+
+                // Record promo code generation history
+                PromoCodeGenerationHistory::create([
+                    'sale_id' => $sale->id,
+                    'promo_code' => $promoCode,
+                    'amount_spent' => $data['total_amount'],
+                    'discount_received' => 0,
+                    'status' => 'generated',
+                ]);
+
+                $promoCodes[] = [
+                    'product_id' => $item['product_id'],
+                    'code' => $promoCode,
+                ];
             }
-
-            // Generate promo code (you can implement your own logic here)
-            $promoCode = $this->generatePromoCodeLogic($sale);
-
-            // Record promo code generation history
-            $history = PromoCodeGenerationHistory::create([
-                'sale_id' => $sale->id,
-                'promo_code' => $promoCode,
-                'amount_spent' => $data['total_amount'],
-                'discount_received' => 0,
-                'status' => 'generated',
-            ]);
 
             DB::commit();
 
@@ -142,11 +157,7 @@ class PromoCodeController extends Controller
                 [
                     'sale_id' => $sale->id,
                     'check_number' => $sale->check_number,
-                    'promo_code' => $promoCode,
-                    'amount_spent' => $data['total_amount'],
-                ],
-                [
-                    'timestamp' => now()->toISOString(),
+                    'codes' => $promoCodes,
                 ]
             );
         } catch (\Exception $e) {
@@ -155,23 +166,21 @@ class PromoCodeController extends Controller
             return ApiResponse::make(
                 false,
                 500,
-                'Failed to generate promo code',
-                null,
-                ['error' => $e->getMessage()]
+                'Failed to generate promo code'
             );
         }
     }
 
     /**
-     * Generate a promo code based on sale data
+     * Generate a promo code based on sale data and product
      * You can implement your own logic here
      */
-    private function generatePromoCodeLogic(Sale $sale): string
+    private function generatePromoCodeLogic(Sale $sale, int $productId): string
     {
-        // Example: Generate a promo code based on sale ID and timestamp
+        // Example: Generate a promo code based on sale ID, product ID and timestamp
         $prefix = 'PROMO';
         $timestamp = now()->format('Ymd');
-        $unique = strtoupper(substr(md5($sale->id . $sale->check_number), 0, 6));
+        $unique = strtoupper(substr(md5($sale->id . $sale->check_number . $productId), 0, 6));
 
         return "{$prefix}{$timestamp}{$unique}";
     }
