@@ -357,7 +357,9 @@ class EventController extends Controller
      * @bodyParam check_number string required Receipt/check number to cancel items from. Example: CHK-20251121-001
      * @bodyParam branch_id string required Branch code/identifier (must match receipt's branch). Example: BR001
      * @bodyParam cashier_id string required Cashier identifier performing the cancellation. Example: CASH123
-     * @bodyParam cancelled_items array required Array of sale item IDs to cancel (at least 1 required). Example: [1, 2, 3]
+     * @bodyParam cancelled_items array required Array of items to cancel (at least 1 required).
+     * @bodyParam cancelled_items.*.product_id integer required Product ID. Example: 1
+     * @bodyParam cancelled_items.*.price number required Item price. Example: 25.00
      *
      * @param  Request  $request
      * @return JsonResponse
@@ -397,7 +399,8 @@ class EventController extends Controller
             'branch_id' => 'required|string',
             'cashier_id' => 'required|string',
             'cancelled_items' => 'required|array|min:1',
-            'cancelled_items.*' => 'required|integer|exists:sale_items,id',
+            'cancelled_items.*.product_id' => 'required|integer',
+            'cancelled_items.*.price' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -437,18 +440,20 @@ class EventController extends Controller
 
                 $sale = Sale::where('check_number', $data['check_number'])->firstOrFail();
 
-                // Mark items as cancelled
-                $cancelledItems = SaleItem::whereIn('id', $data['cancelled_items'])
-                    ->where('sale_id', $sale->id)
-                    ->get();
+                // Mark items as cancelled by matching product_id
+                foreach ($data['cancelled_items'] as $cancelItem) {
+                    $saleItem = SaleItem::where('sale_id', $sale->id)
+                        ->where('product_id', $cancelItem['product_id'])
+                        ->where('is_cancelled', false)
+                        ->first();
 
-                if (!$cancelledItems->isEmpty()) {
-                    foreach ($cancelledItems as $item) {
-                        if (!$item->is_cancelled) {
-                            $item->is_cancelled = true;
-                            $item->save();
-                        }
+                    if ($saleItem) {
+                        $saleItem->is_cancelled = true;
+                        $saleItem->save();
                     }
+                }
+
+                if (count($data['cancelled_items']) > 0) {
 
                     // Update sale status
                     $allItemsCancelled = $sale->items()->where('is_cancelled', false)->count() === 0;

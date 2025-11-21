@@ -33,8 +33,6 @@ class PromoCodeController extends Controller
      * @bodyParam items.*.product_id integer required Product ID. Example: 1
      * @bodyParam items.*.barcode string required Product barcode. Example: 1234567890123
      * @bodyParam items.*.price number required Unit price of the item. Example: 25.00
-     * @bodyParam items.*.total_price number required Total price for this item. Example: 25.00
-     * @bodyParam items.*.discount_price number Discount amount for this item. Example: 5.00
      *
      * @param  Request  $request
      * @return JsonResponse
@@ -88,8 +86,6 @@ class PromoCodeController extends Controller
             'items.*.product_id' => 'required|integer',
             'items.*.barcode' => 'required|string',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.total_price' => 'required|numeric|min:0',
-            'items.*.discount_price' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -134,8 +130,6 @@ class PromoCodeController extends Controller
             // Create sale items and generate promo codes
             $promoCodes = [];
             foreach ($data['items'] as $item) {
-                $itemFinalPrice = $item['total_price'] - ($item['discount_price'] ?? 0);
-
                 SaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $item['product_id'],
@@ -143,9 +137,9 @@ class PromoCodeController extends Controller
                     'quantity' => 1.000,
                     'unit' => 'pcs',
                     'unit_price' => $item['price'],
-                    'total_price' => $item['total_price'],
-                    'discount_price' => $item['discount_price'] ?? 0,
-                    'final_price' => $itemFinalPrice,
+                    'total_price' => $item['price'],
+                    'discount_price' => 0,
+                    'final_price' => $item['price'],
                     'is_cancelled' => false,
                 ]);
 
