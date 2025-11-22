@@ -65,9 +65,9 @@ class PromoCodeController extends Controller
      * @param  PromoCodeGenerateRequest  $request
      * @return JsonResponse
      *
-     * @response 201 scenario="Success" {
+     * @response 200 scenario="Success" {
      *   "ok": true,
-     *   "code": 201,
+     *   "code": 200,
      *   "message": "Promo code generated successfully",
      *   "result": {
      *     "receipt_id": "RCP-001",
