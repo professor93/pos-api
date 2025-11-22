@@ -452,7 +452,7 @@ class EventController extends Controller
      * @bodyParam cashier_id string required Cashier identifier performing the cancellation. Example: CASH123
      * @bodyParam cancelled_items array required Array of items to cancel (at least 1 required).
      * @bodyParam cancelled_items.*.product_id string required Product ID. Example: PROD-001
-     * @bodyParam cancelled_items.*.price number required Item price. Example: 25.00
+     * @bodyParam cancelled_items.*.amount number required Item amount. Example: 25.00
      *
      * @param  Request  $request
      * @return JsonResponse
@@ -493,7 +493,7 @@ class EventController extends Controller
             'cashier_id' => 'required|string',
             'cancelled_items' => 'required|array|min:1',
             'cancelled_items.*.product_id' => 'required|string',
-            'cancelled_items.*.price' => 'required|numeric|min:0',
+            'cancelled_items.*.amount' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {

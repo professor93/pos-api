@@ -31,7 +31,7 @@ class PromoCodeController extends Controller
      * @bodyParam cashier_id string required Cashier identifier. Example: CASH123
      * @bodyParam items array required Array of sale items (at least 1 item required).
      * @bodyParam items.*.product_id string required Product ID. Example: PROD-001
-     * @bodyParam items.*.price number required Unit price of the item. Example: 25.00
+     * @bodyParam items.*.amount number required Unit price of the item. Example: 25.00
      *
      * @param  Request  $request
      * @return JsonResponse
@@ -83,7 +83,7 @@ class PromoCodeController extends Controller
             'cashier_id' => 'required|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|string',
-            'items.*.price' => 'required|numeric|min:0',
+            'items.*.amount' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -134,10 +134,10 @@ class PromoCodeController extends Controller
                     'barcode' => '',
                     'quantity' => 1.000,
                     'unit' => 'pcs',
-                    'unit_price' => $item['price'],
-                    'total_price' => $item['price'],
+                    'unit_price' => $item['amount'],
+                    'total_price' => $item['amount'],
                     'discount_price' => 0,
-                    'final_price' => $item['price'],
+                    'final_price' => $item['amount'],
                     'is_cancelled' => false,
                 ]);
 
