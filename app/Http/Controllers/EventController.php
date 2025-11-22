@@ -3,10 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
-use App\Http\Requests\InventoryItemsAddedRequest;
-use App\Http\Requests\InventoryItemsRemovedRequest;
-use App\Http\Requests\ProductCatalogRequest;
-use App\Http\Requests\PromoCodeCancelRequest;
 use App\Http\Resources\EventReceivedResource;
 use App\Models\Branch;
 use App\Models\InventoryHistory;
@@ -14,6 +10,7 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -67,7 +64,7 @@ class EventController extends Controller
      * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
      * @bodyParam products.*.category string Product category. Example: Beverages
      *
-     * @param  ProductCatalogRequest  $request
+     * @param  Request  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -79,16 +76,10 @@ class EventController extends Controller
      *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
-     *
-     * @response 400 scenario="Validation Error" {
-     *   "ok": false,
-     *   "code": 400,
-     *   "message": "Validation failed"
-     * }
      */
-    public function productCatalogCreated(ProductCatalogRequest $request): JsonResponse
+    public function productCatalogCreated(Request $request): JsonResponse
     {
-        $data = $request->validated();
+        $data = $request->all();
         $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
@@ -145,7 +136,7 @@ class EventController extends Controller
             200,
             'Product catalog event received successfully',
             new EventReceivedResource([
-                'products_count' => count($data['products']),
+                'products_count' => isset($data['products']) ? count($data['products']) : 0,
                 'process_id' => $processId,
             ])
         );
@@ -171,7 +162,7 @@ class EventController extends Controller
      * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
      * @bodyParam products.*.category string Product category. Example: Beverages
      *
-     * @param  ProductCatalogRequest  $request
+     * @param  Request  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -183,16 +174,10 @@ class EventController extends Controller
      *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
-     *
-     * @response 400 scenario="Validation Error" {
-     *   "ok": false,
-     *   "code": 400,
-     *   "message": "Validation failed"
-     * }
      */
-    public function productCatalogUpdated(ProductCatalogRequest $request): JsonResponse
+    public function productCatalogUpdated(Request $request): JsonResponse
     {
-        $data = $request->validated();
+        $data = $request->all();
         $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
@@ -243,7 +228,7 @@ class EventController extends Controller
             200,
             'Product catalog update event received successfully',
             new EventReceivedResource([
-                'products_count' => count($data['products']),
+                'products_count' => isset($data['products']) ? count($data['products']) : 0,
                 'process_id' => $processId,
             ])
         );
@@ -267,7 +252,7 @@ class EventController extends Controller
      * @bodyParam items.*.previous_quantity number required Previous quantity before addition. Example: 40.000
      * @bodyParam items.*.total_quantity number required New total quantity after addition. Example: 50.500
      *
-     * @param  InventoryItemsAddedRequest  $request
+     * @param  Request  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -279,16 +264,10 @@ class EventController extends Controller
      *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
-     *
-     * @response 400 scenario="Validation Error" {
-     *   "ok": false,
-     *   "code": 400,
-     *   "message": "Validation failed"
-     * }
      */
-    public function inventoryItemsAdded(InventoryItemsAddedRequest $request): JsonResponse
+    public function inventoryItemsAdded(Request $request): JsonResponse
     {
-        $data = $request->validated();
+        $data = $request->all();
         $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
@@ -341,7 +320,7 @@ class EventController extends Controller
             200,
             'Inventory items added event received successfully',
             new EventReceivedResource([
-                'items_count' => count($data['items']),
+                'items_count' => isset($data['items']) ? count($data['items']) : 0,
                 'process_id' => $processId,
             ])
         );
@@ -364,7 +343,7 @@ class EventController extends Controller
      * @bodyParam items.*.quantity number required Quantity removed (min: 0.001). Example: 5.000
      * @bodyParam items.*.previous_quantity number required Previous quantity before removal. Example: 50.500
      *
-     * @param  InventoryItemsRemovedRequest  $request
+     * @param  Request  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -376,16 +355,10 @@ class EventController extends Controller
      *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
-     *
-     * @response 400 scenario="Validation Error" {
-     *   "ok": false,
-     *   "code": 400,
-     *   "message": "Validation failed"
-     * }
      */
-    public function inventoryItemsRemoved(InventoryItemsRemovedRequest $request): JsonResponse
+    public function inventoryItemsRemoved(Request $request): JsonResponse
     {
-        $data = $request->validated();
+        $data = $request->all();
         $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
@@ -440,7 +413,7 @@ class EventController extends Controller
             200,
             'Inventory items removed event received successfully',
             new EventReceivedResource([
-                'items_count' => count($data['items']),
+                'items_count' => isset($data['items']) ? count($data['items']) : 0,
                 'process_id' => $processId,
             ])
         );
@@ -463,7 +436,7 @@ class EventController extends Controller
      * @bodyParam cancelled_items.*.product_id string required Product ID. Example: PROD-001
      * @bodyParam cancelled_items.*.amount number required Item amount. Example: 25.00
      *
-     * @param  PromoCodeCancelRequest  $request
+     * @param  Request  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -475,52 +448,12 @@ class EventController extends Controller
      *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
-     *
-     * @response 400 scenario="Validation Error" {
-     *   "ok": false,
-     *   "code": 400,
-     *   "message": "Validation failed"
-     * }
-     *
-     * @response 403 scenario="Branch Mismatch" {
-     *   "ok": false,
-     *   "code": 403,
-     *   "message": "Branch ID does not match the receipt"
-     * }
-     *
-     * @response 404 scenario="Branch Not Found" {
-     *   "ok": false,
-     *   "code": 404,
-     *   "message": "Branch not found for the provided branch_id"
-     * }
      */
-    public function promoCodeCancelled(PromoCodeCancelRequest $request): JsonResponse
+    public function promoCodeCancelled(Request $request): JsonResponse
     {
-        $data = $request->validated();
+        $data = $request->all();
         $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
-
-        // Perform security checks before deferring
-        $sale = Sale::where('receipt_id', $data['receipt_id'])->first();
-
-        // Look up branch by ext_id
-        $branch = Branch::where('ext_id', $data['branch_id'])->first();
-        if (!$branch) {
-            return ApiResponse::make(
-                false,
-                404,
-                'Branch not found for the provided branch_id'
-            );
-        }
-
-        // Verify branch_id matches (security check)
-        if ($sale->branch_id !== $branch->id) {
-            return ApiResponse::make(
-                false,
-                403,
-                'Branch ID does not match the receipt'
-            );
-        }
 
         // Defer processing to after response is sent
         defer(function () use ($data, $sequenceId, $processId) {
@@ -564,7 +497,7 @@ class EventController extends Controller
             200,
             'Promo code cancellation event received successfully',
             new EventReceivedResource([
-                'cancelled_items_count' => count($data['cancelled_items']),
+                'cancelled_items_count' => isset($data['cancelled_items']) ? count($data['cancelled_items']) : 0,
                 'process_id' => $processId,
             ])
         );
