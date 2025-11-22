@@ -12,7 +12,7 @@ class Branch extends Model
 
     protected $fillable = [
         'name',
-        'code',
+        'ext_id',
         'address',
         'phone',
         'is_active',

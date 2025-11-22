@@ -13,9 +13,8 @@ return new class extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
-            $table->string('check_number')->unique();
+            $table->string('receipt_id')->unique();
             $table->foreignId('branch_id')->constrained('branches')->onDelete('cascade');
-            $table->string('store_id'); // External POS store ID (can be UUID or string)
             $table->string('cashier_id'); // External POS cashier ID (can be UUID or string)
             $table->decimal('total_amount', 10, 2);
             $table->timestamp('sold_at');
