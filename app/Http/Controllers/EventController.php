@@ -35,8 +35,7 @@ class EventController extends Controller
      * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
      * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
      * @bodyParam products.*.price number required Product price. Example: 2.50
-     * @bodyParam products.*.discounted_price number Discounted price. Example: 2.00
-     * @bodyParam products.*.sold_price number Sold price. Example: 2.25
+     * @bodyParam products.*.discount_price number Discount price. Example: 2.00
      * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
      * @bodyParam products.*.category string Product category. Example: Beverages
      *
@@ -68,8 +67,7 @@ class EventController extends Controller
             'products.*.barcode' => 'required|string',
             'products.*.description' => 'nullable|string',
             'products.*.price' => 'required|numeric|min:0',
-            'products.*.discounted_price' => 'nullable|numeric|min:0',
-            'products.*.sold_price' => 'nullable|numeric|min:0',
+            'products.*.discount_price' => 'nullable|numeric|min:0',
             'products.*.unit' => 'required|string',
             'products.*.category' => 'nullable|string',
         ]);
@@ -104,8 +102,7 @@ class EventController extends Controller
                         'barcode' => $productData['barcode'],
                         'description' => $productData['description'] ?? null,
                         'price' => $productData['price'],
-                        'discounted_price' => $productData['discounted_price'] ?? null,
-                        'sold_price' => $productData['sold_price'] ?? null,
+                        'discount_price' => $productData['discount_price'] ?? null,
                         'unit' => $productData['unit'],
                         'category' => $productData['category'] ?? null,
                         'is_active' => true,
@@ -151,8 +148,7 @@ class EventController extends Controller
      * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
      * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
      * @bodyParam products.*.price number required Product price. Example: 2.50
-     * @bodyParam products.*.discounted_price number Discounted price. Example: 2.00
-     * @bodyParam products.*.sold_price number Sold price. Example: 2.25
+     * @bodyParam products.*.discount_price number Discount price. Example: 2.00
      * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
      * @bodyParam products.*.category string Product category. Example: Beverages
      *
@@ -184,8 +180,7 @@ class EventController extends Controller
             'products.*.barcode' => 'required|string',
             'products.*.description' => 'nullable|string',
             'products.*.price' => 'required|numeric|min:0',
-            'products.*.discounted_price' => 'nullable|numeric|min:0',
-            'products.*.sold_price' => 'nullable|numeric|min:0',
+            'products.*.discount_price' => 'nullable|numeric|min:0',
             'products.*.unit' => 'required|string',
             'products.*.category' => 'nullable|string',
         ]);
@@ -216,8 +211,7 @@ class EventController extends Controller
                             'barcode' => $productData['barcode'],
                             'description' => $productData['description'] ?? null,
                             'price' => $productData['price'],
-                            'discounted_price' => $productData['discounted_price'] ?? null,
-                            'sold_price' => $productData['sold_price'] ?? null,
+                            'discount_price' => $productData['discount_price'] ?? null,
                             'unit' => $productData['unit'],
                             'category' => $productData['category'] ?? null,
                             'sequence_id' => $data['sequence_id'],
