@@ -7,6 +7,7 @@ use Dedoc\Scramble\Support\Generator\OpenApi;
 use Illuminate\Routing\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,9 +25,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // force HTTPS in production
-        // if ($this->app->environment('production')) {
-            \URL::forceScheme('https');
-        // }
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
 
         // Configure Scramble to use /api-docs instead of /docs/api
         Scramble::registerUiRoute('api-docs')
