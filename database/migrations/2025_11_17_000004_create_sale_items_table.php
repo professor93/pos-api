@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('sale_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sale_id')->constrained('sales')->onDelete('cascade');
-            $table->string('product_id'); // External product ID (not FK)
+            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
             $table->string('unit');
             $table->decimal('unit_price', 10, 2);
             $table->boolean('is_cancelled')->default(false);
