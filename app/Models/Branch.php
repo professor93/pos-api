@@ -26,6 +26,14 @@ class Branch extends Model
     }
 
     /**
+     * Get the products for this branch.
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    /**
      * Get the sales for this branch.
      */
     public function sales(): HasMany

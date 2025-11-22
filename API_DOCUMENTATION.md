@@ -31,6 +31,33 @@ This will output:
 - API token for Bearer authentication
 - Demo branches for testing
 
+## Database Seeding
+
+To populate your database with sample data for testing, run:
+
+```bash
+php artisan db:seed
+```
+
+This will create:
+- A test user (email: test@example.com, password: password)
+- Sample branches
+- Sample products
+
+### Sample Data
+
+**Branches:**
+- BR001: Main Branch (123 Main Street, Downtown)
+- BR002: North Branch (456 North Avenue, Uptown)
+- BR003: South Branch (789 South Boulevard, Southside)
+
+**Products:**
+- PROD-001: Coca Cola 500ml (Branch: BR001, Price: $2.50, Barcode: 1234567890123)
+- PROD-002: Pepsi 500ml (Branch: BR001, Price: $2.50, Barcode: 1234567890124)
+- PROD-003: Mineral Water 1L (Branch: BR002, Price: $1.50, Barcode: 1234567890125)
+- PROD-004: Chips 100g (Branch: BR002, Price: $3.00, Barcode: 1234567890126)
+- PROD-005: Chocolate Bar 50g (Branch: BR003, Price: $2.00, Barcode: 1234567890127)
+
 ## Accessing API Documentation
 
 ### Interactive Documentation
