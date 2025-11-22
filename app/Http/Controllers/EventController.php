@@ -106,7 +106,6 @@ class EventController extends Controller
                         'unit' => $productData['unit'],
                         'category' => $productData['category'] ?? null,
                         'is_active' => true,
-                        'status' => 'new',
                         'sequence_id' => $data['sequence_id'],
                     ]);
                 }
@@ -313,7 +312,6 @@ class EventController extends Controller
                         'previous_quantity' => $item['previous_quantity'],
                         'new_quantity' => $item['total_quantity'],
                         'total_quantity' => $item['total_quantity'],
-                        'status' => 'new',
                         'sequence_id' => $data['sequence_id'],
                     ]);
                 }
@@ -411,7 +409,6 @@ class EventController extends Controller
                         'quantity' => $item['quantity'],
                         'previous_quantity' => $item['previous_quantity'],
                         'new_quantity' => $newQuantity,
-                        'status' => 'new',
                         'sequence_id' => $data['sequence_id'],
                     ]);
                 }

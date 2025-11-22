@@ -20,7 +20,6 @@ class InventoryHistory extends Model
         'previous_quantity',
         'new_quantity',
         'total_quantity',
-        'status',
         'sequence_id',
     ];
 

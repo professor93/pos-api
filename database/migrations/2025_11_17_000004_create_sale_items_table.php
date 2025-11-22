@@ -15,13 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('sale_id')->constrained('sales')->onDelete('cascade');
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->string('barcode');
-            $table->decimal('quantity', 10, 3);
             $table->string('unit');
             $table->decimal('unit_price', 10, 2);
-            $table->decimal('total_price', 10, 2);
-            $table->decimal('discount_price', 10, 2)->default(0);
-            $table->decimal('final_price', 10, 2);
             $table->boolean('is_cancelled')->default(false);
             $table->timestamps();
         });

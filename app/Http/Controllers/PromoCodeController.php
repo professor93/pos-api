@@ -117,10 +117,6 @@ class PromoCodeController extends Controller
                 'store_id' => $data['branch_id'],
                 'cashier_id' => $data['cashier_id'],
                 'total_amount' => $data['total_amount'],
-                'discount_amount' => 0,
-                'final_amount' => $data['total_amount'],
-                'fiscal_sign' => null,
-                'terminal_id' => null,
                 'sold_at' => $data['sold_at'],
                 'status' => 'completed',
             ]);
@@ -131,13 +127,8 @@ class PromoCodeController extends Controller
                 SaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $item['product_id'],
-                    'barcode' => '',
-                    'quantity' => 1.000,
                     'unit' => 'pcs',
                     'unit_price' => $item['amount'],
-                    'total_price' => $item['amount'],
-                    'discount_price' => 0,
-                    'final_price' => $item['amount'],
                     'is_cancelled' => false,
                 ]);
 
@@ -148,8 +139,6 @@ class PromoCodeController extends Controller
                 PromoCodeGenerationHistory::create([
                     'sale_id' => $sale->id,
                     'promo_code' => $promoCode,
-                    'amount_spent' => $data['total_amount'],
-                    'discount_received' => 0,
                     'status' => 'generated',
                 ]);
 

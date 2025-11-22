@@ -18,10 +18,6 @@ return new class extends Migration
             $table->string('store_id'); // External POS store ID (can be UUID or string)
             $table->string('cashier_id'); // External POS cashier ID (can be UUID or string)
             $table->decimal('total_amount', 10, 2);
-            $table->decimal('discount_amount', 10, 2)->default(0);
-            $table->decimal('final_amount', 10, 2);
-            $table->string('fiscal_sign')->nullable();
-            $table->string('terminal_id')->nullable();
             $table->timestamp('sold_at');
             $table->enum('status', ['completed', 'cancelled', 'partially_cancelled'])->default('completed');
             $table->timestamps();

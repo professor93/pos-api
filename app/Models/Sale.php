@@ -18,10 +18,6 @@ class Sale extends Model
         'store_id',
         'cashier_id',
         'total_amount',
-        'discount_amount',
-        'final_amount',
-        'fiscal_sign',
-        'terminal_id',
         'sold_at',
         'status',
     ];
@@ -30,8 +26,6 @@ class Sale extends Model
     {
         return [
             'total_amount' => 'decimal:2',
-            'discount_amount' => 'decimal:2',
-            'final_amount' => 'decimal:2',
             'sold_at' => 'datetime',
         ];
     }
