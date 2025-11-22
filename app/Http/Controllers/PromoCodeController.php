@@ -3,37 +3,40 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Requests\PromoCodeGenerateRequest;
 use App\Http\Resources\PromoCodeGeneratedResource;
 use App\Models\Branch;
-use App\Models\PromoCodeGenerationHistory;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Services\PromoCodeService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 
 class PromoCodeController extends Controller
 {
+    public function __construct(
+        private PromoCodeService $promoCodeService
+    ) {}
+
     /**
      * Generate a promo code based on a sales receipt
      *
      * This endpoint creates a sale record and generates a promo code for the customer.
-     * The store (branch) is looked up by branch_id (matching the branch code).
+     * The branch is looked up by branch_id (matching the branch ext_id).
      * Each item in the sale generates a unique 10-character alphanumeric promo code.
      *
      * @tags Promo Codes
      *
-     * @bodyParam check_number string required Unique check/receipt number. Example: CHK-20251121-001
+     * @bodyParam receipt_id string required Unique receipt number. Example: RCP-20251121-001
      * @bodyParam total_amount number required Total sale amount. Example: 150.50
      * @bodyParam sold_at string required Sale datetime in ISO 8601 format. Example: 2025-11-21T10:30:00Z
-     * @bodyParam branch_id string required Branch code/identifier. Example: BR001
+     * @bodyParam branch_id string required Branch external identifier. Example: BR001
      * @bodyParam cashier_id string required Cashier identifier. Example: CASH123
      * @bodyParam items array required Array of sale items (at least 1 item required).
-     * @bodyParam items.*.product_id string required Product ID. Example: PROD-001
+     * @bodyParam items.*.product_id string required Product external ID. Example: PROD-001
      * @bodyParam items.*.amount number required Unit price of the item. Example: 25.00
      *
-     * @param  Request  $request
+     * @param  PromoCodeGenerateRequest  $request
      * @return JsonResponse
      *
      * @response 201 scenario="Success" {
@@ -41,7 +44,7 @@ class PromoCodeController extends Controller
      *   "code": 201,
      *   "message": "Promo code generated successfully",
      *   "result": {
-     *     "check_number": "CHK-001",
+     *     "receipt_id": "RCP-001",
      *     "codes": [
      *       {
      *         "product_id": "PROD-001",
@@ -58,7 +61,12 @@ class PromoCodeController extends Controller
      * @response 400 scenario="Validation Error" {
      *   "ok": false,
      *   "code": 400,
-     *   "message": "Validation failed"
+     *   "message": "Validation failed",
+     *   "meta": {
+     *     "errors": {
+     *       "receipt_id": ["This receipt ID has already been processed"]
+     *     }
+     *   }
      * }
      *
      * @response 404 scenario="Branch Not Found" {
@@ -73,34 +81,15 @@ class PromoCodeController extends Controller
      *   "message": "Failed to generate promo code"
      * }
      */
-    public function generate(Request $request): JsonResponse
+    public function generate(PromoCodeGenerateRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'check_number' => 'required|string|unique:sales,check_number',
-            'total_amount' => 'required|numeric|min:0',
-            'sold_at' => 'required|date',
-            'branch_id' => 'required|string',
-            'cashier_id' => 'required|string',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|string',
-            'items.*.amount' => 'required|numeric|min:0',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::make(
-                false,
-                400,
-                'Validation failed'
-            );
-        }
-
         try {
             DB::beginTransaction();
 
-            $data = $validator->validated();
+            $data = $request->validated();
 
-            // Look up branch by branch_id (which matches branch code)
-            $branch = Branch::where('code', $data['branch_id'])->first();
+            // Look up branch by ext_id
+            $branch = Branch::where('ext_id', $data['branch_id'])->first();
 
             if (!$branch) {
                 return ApiResponse::make(
@@ -112,41 +101,39 @@ class PromoCodeController extends Controller
 
             // Create the sale record
             $sale = Sale::create([
-                'check_number' => $data['check_number'],
+                'receipt_id' => $data['receipt_id'],
                 'branch_id' => $branch->id,
-                'store_id' => $data['branch_id'],
                 'cashier_id' => $data['cashier_id'],
                 'total_amount' => $data['total_amount'],
                 'sold_at' => $data['sold_at'],
                 'status' => 'completed',
             ]);
 
-            // Create sale items and generate promo codes
+            // Prepare bulk insert data for sale items and generate promo codes
+            $saleItems = [];
             $promoCodes = [];
+
             foreach ($data['items'] as $item) {
-                SaleItem::create([
+                $promoCode = $this->promoCodeService->generateCode();
+
+                $saleItems[] = [
                     'sale_id' => $sale->id,
                     'product_id' => $item['product_id'],
                     'unit' => 'pcs',
                     'unit_price' => $item['amount'],
                     'is_cancelled' => false,
-                ]);
-
-                // Generate promo code for each item
-                $promoCode = $this->generatePromoCodeLogic($sale, $item['product_id']);
-
-                // Record promo code generation history
-                PromoCodeGenerationHistory::create([
-                    'sale_id' => $sale->id,
-                    'promo_code' => $promoCode,
-                    'status' => 'generated',
-                ]);
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
 
                 $promoCodes[] = [
                     'product_id' => $item['product_id'],
                     'code' => $promoCode,
                 ];
             }
+
+            // Bulk insert sale items
+            SaleItem::insert($saleItems);
 
             DB::commit();
 
@@ -155,12 +142,18 @@ class PromoCodeController extends Controller
                 201,
                 'Promo code generated successfully',
                 new PromoCodeGeneratedResource([
-                    'check_number' => $sale->check_number,
+                    'receipt_id' => $sale->receipt_id,
                     'codes' => $promoCodes,
                 ])
             );
         } catch (\Exception $e) {
             DB::rollBack();
+
+            logger()->error('Failed to generate promo code', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $request->validated(),
+            ]);
 
             return ApiResponse::make(
                 false,
@@ -168,20 +161,5 @@ class PromoCodeController extends Controller
                 'Failed to generate promo code'
             );
         }
-    }
-
-    /**
-     * Generate a random 10-character alphanumeric promo code (0-9A-Z)
-     */
-    private function generatePromoCodeLogic(Sale $sale, string $productId): string
-    {
-        $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $code = '';
-
-        for ($i = 0; $i < 10; $i++) {
-            $code .= $characters[random_int(0, strlen($characters) - 1)];
-        }
-
-        return $code;
     }
 }

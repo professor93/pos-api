@@ -3,16 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Requests\InventoryItemsAddedRequest;
+use App\Http\Requests\InventoryItemsRemovedRequest;
+use App\Http\Requests\ProductCatalogRequest;
+use App\Http\Requests\PromoCodeCancelRequest;
 use App\Http\Resources\EventReceivedResource;
+use App\Models\Branch;
 use App\Models\InventoryHistory;
 use App\Models\Product;
-use App\Models\PromoCodeGenerationHistory;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 use function Illuminate\Support\defer;
@@ -23,23 +25,23 @@ class EventController extends Controller
      * Handle product catalog created event
      *
      * This endpoint processes product catalog events from external systems.
-     * Products are created with status='new' for later processing.
+     * Products are created if their ext_id doesn't already exist.
      * Processing is deferred to after the HTTP response is sent.
      *
      * @tags Events
      *
-     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @header X-Sequence-Id integer required Event sequence ID for ordering. Example: 1
      * @bodyParam products array required Array of products to create (at least 1 required).
-     * @bodyParam products.*.id string required Product ID from external system. Example: PROD-101
+     * @bodyParam products.*.id string required Product external ID. Example: PROD-101
      * @bodyParam products.*.name string required Product name. Example: Coca Cola 500ml
-     * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
+     * @bodyParam products.*.barcode string required Product barcode (alphanumeric and hyphens only). Example: 1234567890123
      * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
      * @bodyParam products.*.price number required Product price. Example: 2.50
      * @bodyParam products.*.discount_price number Discount price. Example: 2.00
      * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
      * @bodyParam products.*.category string Product category. Example: Beverages
      *
-     * @param  Request  $request
+     * @param  ProductCatalogRequest  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -47,7 +49,8 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Product catalog event received successfully",
      *   "result": {
-     *     "products_count": 2
+     *     "products_count": 2,
+     *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
      *
@@ -57,66 +60,56 @@ class EventController extends Controller
      *   "message": "Validation failed"
      * }
      */
-    public function productCatalogCreated(Request $request): JsonResponse
+    public function productCatalogCreated(ProductCatalogRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'sequence_id' => 'required|integer',
-            'products' => 'required|array|min:1',
-            'products.*.id' => 'required|string',
-            'products.*.name' => 'required|string',
-            'products.*.barcode' => 'required|string',
-            'products.*.description' => 'nullable|string',
-            'products.*.price' => 'required|numeric|min:0',
-            'products.*.discount_price' => 'nullable|numeric|min:0',
-            'products.*.unit' => 'required|string',
-            'products.*.category' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::make(
-                false,
-                400,
-                'Validation failed'
-            );
-        }
-
-        $data = $validator->validated();
+        $data = $request->validated();
+        $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data, $processId) {
+        defer(function () use ($data, $sequenceId, $processId) {
             try {
                 DB::beginTransaction();
 
+                // Get existing ext_ids to filter out duplicates
+                $extIds = array_column($data['products'], 'id');
+                $existingExtIds = Product::whereIn('ext_id', $extIds)
+                    ->pluck('ext_id')
+                    ->toArray();
+
+                // Prepare bulk insert data for new products only
+                $productsToCreate = [];
                 foreach ($data['products'] as $productData) {
-                    // Check if product with this barcode already exists
-                    $existingProduct = Product::where('barcode', $productData['barcode'])->first();
-
-                    if ($existingProduct) {
-                        continue;
+                    if (!in_array($productData['id'], $existingExtIds)) {
+                        $productsToCreate[] = [
+                            'ext_id' => $productData['id'],
+                            'name' => $productData['name'],
+                            'barcode' => $productData['barcode'],
+                            'description' => $productData['description'] ?? null,
+                            'price' => $productData['price'],
+                            'discount_price' => $productData['discount_price'] ?? null,
+                            'unit' => $productData['unit'],
+                            'category' => $productData['category'] ?? null,
+                            'is_active' => true,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
                     }
+                }
 
-                    Product::create([
-                        'id' => $productData['id'],
-                        'name' => $productData['name'],
-                        'barcode' => $productData['barcode'],
-                        'description' => $productData['description'] ?? null,
-                        'price' => $productData['price'],
-                        'discount_price' => $productData['discount_price'] ?? null,
-                        'unit' => $productData['unit'],
-                        'category' => $productData['category'] ?? null,
-                        'is_active' => true,
-                        'sequence_id' => $data['sequence_id'],
-                    ]);
+                // Bulk insert new products
+                if (!empty($productsToCreate)) {
+                    Product::insert($productsToCreate);
                 }
 
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                // Log the error for debugging
                 logger()->error('Failed to process product catalog event', [
                     'error' => $e->getMessage(),
-                    'data' => $data,
+                    'trace' => $e->getTraceAsString(),
+                    'process_id' => $processId,
+                    'sequence_id' => $sequenceId,
                 ]);
             }
         });
@@ -127,6 +120,7 @@ class EventController extends Controller
             'Product catalog event received successfully',
             new EventReceivedResource([
                 'products_count' => count($data['products']),
+                'process_id' => $processId,
             ])
         );
     }
@@ -135,23 +129,23 @@ class EventController extends Controller
      * Handle product catalog updated event
      *
      * This endpoint processes product catalog update events from external systems.
-     * Existing products are updated with new data.
+     * Products are created or updated based on their ext_id using upsert.
      * Processing is deferred to after the HTTP response is sent.
      *
      * @tags Events
      *
-     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 2
+     * @header X-Sequence-Id integer required Event sequence ID for ordering. Example: 2
      * @bodyParam products array required Array of products to update (at least 1 required).
-     * @bodyParam products.*.id string required Product ID from external system. Example: PROD-101
+     * @bodyParam products.*.id string required Product external ID. Example: PROD-101
      * @bodyParam products.*.name string required Product name. Example: Coca Cola 500ml
-     * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
+     * @bodyParam products.*.barcode string required Product barcode (alphanumeric and hyphens only). Example: 1234567890123
      * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
      * @bodyParam products.*.price number required Product price. Example: 2.50
      * @bodyParam products.*.discount_price number Discount price. Example: 2.00
      * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
      * @bodyParam products.*.category string Product category. Example: Beverages
      *
-     * @param  Request  $request
+     * @param  ProductCatalogRequest  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -159,7 +153,8 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Product catalog update event received successfully",
      *   "result": {
-     *     "products_count": 2
+     *     "products_count": 2,
+     *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
      *
@@ -169,62 +164,50 @@ class EventController extends Controller
      *   "message": "Validation failed"
      * }
      */
-    public function productCatalogUpdated(Request $request): JsonResponse
+    public function productCatalogUpdated(ProductCatalogRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'sequence_id' => 'required|integer',
-            'products' => 'required|array|min:1',
-            'products.*.id' => 'required|string',
-            'products.*.name' => 'required|string',
-            'products.*.barcode' => 'required|string',
-            'products.*.description' => 'nullable|string',
-            'products.*.price' => 'required|numeric|min:0',
-            'products.*.discount_price' => 'nullable|numeric|min:0',
-            'products.*.unit' => 'required|string',
-            'products.*.category' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::make(
-                false,
-                400,
-                'Validation failed'
-            );
-        }
-
-        $data = $validator->validated();
+        $data = $request->validated();
+        $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data, $processId) {
+        defer(function () use ($data, $sequenceId, $processId) {
             try {
                 DB::beginTransaction();
 
+                // Prepare bulk upsert data
+                $productsToUpsert = [];
                 foreach ($data['products'] as $productData) {
-                    // Find product by ID and update it
-                    $product = Product::find($productData['id']);
-
-                    if ($product) {
-                        $product->update([
-                            'name' => $productData['name'],
-                            'barcode' => $productData['barcode'],
-                            'description' => $productData['description'] ?? null,
-                            'price' => $productData['price'],
-                            'discount_price' => $productData['discount_price'] ?? null,
-                            'unit' => $productData['unit'],
-                            'category' => $productData['category'] ?? null,
-                            'sequence_id' => $data['sequence_id'],
-                        ]);
-                    }
+                    $productsToUpsert[] = [
+                        'ext_id' => $productData['id'],
+                        'name' => $productData['name'],
+                        'barcode' => $productData['barcode'],
+                        'description' => $productData['description'] ?? null,
+                        'price' => $productData['price'],
+                        'discount_price' => $productData['discount_price'] ?? null,
+                        'unit' => $productData['unit'],
+                        'category' => $productData['category'] ?? null,
+                        'is_active' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
                 }
+
+                // Bulk upsert products
+                Product::upsert(
+                    $productsToUpsert,
+                    ['ext_id'], // Unique key to match on
+                    ['name', 'barcode', 'description', 'price', 'discount_price', 'unit', 'category', 'updated_at'] // Fields to update
+                );
 
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                // Log the error for debugging
                 logger()->error('Failed to process product catalog update event', [
                     'error' => $e->getMessage(),
-                    'data' => $data,
+                    'trace' => $e->getTraceAsString(),
+                    'process_id' => $processId,
+                    'sequence_id' => $sequenceId,
                 ]);
             }
         });
@@ -235,6 +218,7 @@ class EventController extends Controller
             'Product catalog update event received successfully',
             new EventReceivedResource([
                 'products_count' => count($data['products']),
+                'process_id' => $processId,
             ])
         );
     }
@@ -243,13 +227,13 @@ class EventController extends Controller
      * Handle inventory items added event
      *
      * This endpoint processes inventory addition events from external systems.
-     * Records are created with status='new' for later processing.
+     * Records are created for tracking inventory additions.
      * Processing is deferred to after the HTTP response is sent.
      * No validation is performed on product_id or branch_id existence.
      *
      * @tags Events
      *
-     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @header X-Sequence-Id integer required Event sequence ID for ordering. Example: 1
      * @bodyParam items array required Array of inventory items to add (at least 1 required).
      * @bodyParam items.*.product_id string required Product ID. Example: PROD-101
      * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
@@ -257,7 +241,7 @@ class EventController extends Controller
      * @bodyParam items.*.previous_quantity number required Previous quantity before addition. Example: 40.000
      * @bodyParam items.*.total_quantity number required New total quantity after addition. Example: 50.500
      *
-     * @param  Request  $request
+     * @param  InventoryItemsAddedRequest  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -265,7 +249,8 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Inventory items added event received successfully",
      *   "result": {
-     *     "items_count": 1
+     *     "items_count": 1,
+     *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
      *
@@ -275,36 +260,21 @@ class EventController extends Controller
      *   "message": "Validation failed"
      * }
      */
-    public function inventoryItemsAdded(Request $request): JsonResponse
+    public function inventoryItemsAdded(InventoryItemsAddedRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'sequence_id' => 'required|integer',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|string',
-            'items.*.branch_id' => 'required|integer',
-            'items.*.quantity' => 'required|numeric|min:0.001',
-            'items.*.previous_quantity' => 'required|numeric|min:0',
-            'items.*.total_quantity' => 'required|numeric|min:0',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::make(
-                false,
-                400,
-                'Validation failed'
-            );
-        }
-
-        $data = $validator->validated();
+        $data = $request->validated();
+        $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data, $processId) {
+        defer(function () use ($data, $sequenceId, $processId) {
             try {
                 DB::beginTransaction();
 
+                // Prepare bulk insert data
+                $inventoryRecords = [];
                 foreach ($data['items'] as $item) {
-                    InventoryHistory::create([
+                    $inventoryRecords[] = [
                         'product_id' => $item['product_id'],
                         'branch_id' => $item['branch_id'],
                         'type' => 'added',
@@ -312,17 +282,22 @@ class EventController extends Controller
                         'previous_quantity' => $item['previous_quantity'],
                         'new_quantity' => $item['total_quantity'],
                         'total_quantity' => $item['total_quantity'],
-                        'sequence_id' => $data['sequence_id'],
-                    ]);
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
                 }
+
+                // Bulk insert inventory records
+                InventoryHistory::insert($inventoryRecords);
 
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                // Log the error for debugging
                 logger()->error('Failed to process inventory items added event', [
                     'error' => $e->getMessage(),
-                    'data' => $data,
+                    'trace' => $e->getTraceAsString(),
+                    'process_id' => $processId,
+                    'sequence_id' => $sequenceId,
                 ]);
             }
         });
@@ -333,6 +308,7 @@ class EventController extends Controller
             'Inventory items added event received successfully',
             new EventReceivedResource([
                 'items_count' => count($data['items']),
+                'process_id' => $processId,
             ])
         );
     }
@@ -341,20 +317,20 @@ class EventController extends Controller
      * Handle inventory items removed event
      *
      * This endpoint processes inventory removal events from external systems.
-     * Records are created with status='new' for later processing.
+     * Records are created for tracking inventory removals.
      * Processing is deferred to after the HTTP response is sent.
      * No validation is performed on product_id or branch_id existence.
      *
      * @tags Events
      *
-     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
+     * @header X-Sequence-Id integer required Event sequence ID for ordering. Example: 1
      * @bodyParam items array required Array of inventory items to remove (at least 1 required).
      * @bodyParam items.*.product_id string required Product ID. Example: PROD-101
      * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
      * @bodyParam items.*.quantity number required Quantity removed (min: 0.001). Example: 5.000
      * @bodyParam items.*.previous_quantity number required Previous quantity before removal. Example: 50.500
      *
-     * @param  Request  $request
+     * @param  InventoryItemsRemovedRequest  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -362,7 +338,8 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Inventory items removed event received successfully",
      *   "result": {
-     *     "items_count": 1
+     *     "items_count": 1,
+     *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
      *
@@ -372,54 +349,45 @@ class EventController extends Controller
      *   "message": "Validation failed"
      * }
      */
-    public function inventoryItemsRemoved(Request $request): JsonResponse
+    public function inventoryItemsRemoved(InventoryItemsRemovedRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'sequence_id' => 'required|integer',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|string',
-            'items.*.branch_id' => 'required|integer',
-            'items.*.quantity' => 'required|numeric|min:0.001',
-            'items.*.previous_quantity' => 'required|numeric|min:0',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::make(
-                false,
-                400,
-                'Validation failed'
-            );
-        }
-
-        $data = $validator->validated();
+        $data = $request->validated();
+        $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
         // Defer processing to after response is sent
-        defer(function () use ($data, $processId) {
+        defer(function () use ($data, $sequenceId, $processId) {
             try {
                 DB::beginTransaction();
 
+                // Prepare bulk insert data
+                $inventoryRecords = [];
                 foreach ($data['items'] as $item) {
                     $newQuantity = max(0, $item['previous_quantity'] - $item['quantity']);
 
-                    InventoryHistory::create([
+                    $inventoryRecords[] = [
                         'product_id' => $item['product_id'],
                         'branch_id' => $item['branch_id'],
                         'type' => 'removed',
                         'quantity' => $item['quantity'],
                         'previous_quantity' => $item['previous_quantity'],
                         'new_quantity' => $newQuantity,
-                        'sequence_id' => $data['sequence_id'],
-                    ]);
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
                 }
+
+                // Bulk insert inventory records
+                InventoryHistory::insert($inventoryRecords);
 
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                // Log the error for debugging
                 logger()->error('Failed to process inventory items removed event', [
                     'error' => $e->getMessage(),
-                    'data' => $data,
+                    'trace' => $e->getTraceAsString(),
+                    'process_id' => $processId,
+                    'sequence_id' => $sequenceId,
                 ]);
             }
         });
@@ -430,28 +398,29 @@ class EventController extends Controller
             'Inventory items removed event received successfully',
             new EventReceivedResource([
                 'items_count' => count($data['items']),
+                'process_id' => $processId,
             ])
         );
     }
 
     /**
-     * Cancel items from a receipt and update promo code status
+     * Cancel items from a receipt
      *
-     * This endpoint marks specific items in a sale as cancelled and updates the promo code status.
+     * This endpoint marks specific items in a sale as cancelled.
      * Processing is deferred to after the HTTP response is sent.
      * If all items are cancelled, the sale status becomes 'cancelled', otherwise 'partially_cancelled'.
      *
      * @tags Events
      *
-     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
-     * @bodyParam check_number string required Receipt/check number to cancel items from. Example: CHK-20251121-001
-     * @bodyParam branch_id string required Branch code/identifier (must match receipt's branch). Example: BR001
+     * @header X-Sequence-Id integer required Event sequence ID for ordering. Example: 1
+     * @bodyParam receipt_id string required Receipt number to cancel items from. Example: RCP-20251121-001
+     * @bodyParam branch_id string required Branch external identifier (must match receipt's branch). Example: BR001
      * @bodyParam cashier_id string required Cashier identifier performing the cancellation. Example: CASH123
      * @bodyParam cancelled_items array required Array of items to cancel (at least 1 required).
      * @bodyParam cancelled_items.*.product_id string required Product ID. Example: PROD-001
      * @bodyParam cancelled_items.*.amount number required Item amount. Example: 25.00
      *
-     * @param  Request  $request
+     * @param  PromoCodeCancelRequest  $request
      * @return JsonResponse
      *
      * @response 200 scenario="Success" {
@@ -459,7 +428,8 @@ class EventController extends Controller
      *   "code": 200,
      *   "message": "Promo code cancellation event received successfully",
      *   "result": {
-     *     "cancelled_items_count": 2
+     *     "cancelled_items_count": 2,
+     *     "process_id": "550e8400-e29b-41d4-a716-446655440000"
      *   }
      * }
      *
@@ -475,60 +445,46 @@ class EventController extends Controller
      *   "message": "Branch ID does not match the receipt"
      * }
      *
-     * @response 404 scenario="Sale Not Found" {
+     * @response 404 scenario="Branch Not Found" {
      *   "ok": false,
      *   "code": 404,
-     *   "message": "Sale not found"
+     *   "message": "Branch not found for the provided branch_id"
      * }
      */
-    public function promoCodeCancelled(Request $request): JsonResponse
+    public function promoCodeCancelled(PromoCodeCancelRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'sequence_id' => 'required|integer',
-            'check_number' => 'required|string|exists:sales,check_number',
-            'branch_id' => 'required|string',
-            'cashier_id' => 'required|string',
-            'cancelled_items' => 'required|array|min:1',
-            'cancelled_items.*.product_id' => 'required|string',
-            'cancelled_items.*.amount' => 'required|numeric|min:0',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::make(
-                false,
-                400,
-                'Validation failed'
-            );
-        }
-
-        $data = $validator->validated();
+        $data = $request->validated();
+        $sequenceId = $request->header('X-Sequence-Id');
         $processId = Str::uuid()->toString();
 
         // Perform security checks before deferring
-        $sale = Sale::where('check_number', $data['check_number'])->first();
-        if (!$sale) {
+        $sale = Sale::where('receipt_id', $data['receipt_id'])->first();
+
+        // Look up branch by ext_id
+        $branch = Branch::where('ext_id', $data['branch_id'])->first();
+        if (!$branch) {
             return ApiResponse::make(
                 false,
                 404,
-                'Sale not found'
+                'Branch not found for the provided branch_id'
             );
         }
 
         // Verify branch_id matches (security check)
-        if ($sale->store_id !== $data['branch_id']) {
+        if ($sale->branch_id !== $branch->id) {
             return ApiResponse::make(
                 false,
                 403,
-                'Branch ID does not match the receipt',
+                'Branch ID does not match the receipt'
             );
         }
 
         // Defer processing to after response is sent
-        defer(function () use ($data, $processId) {
+        defer(function () use ($data, $sequenceId, $processId) {
             try {
                 DB::beginTransaction();
 
-                $sale = Sale::where('check_number', $data['check_number'])->firstOrFail();
+                $sale = Sale::where('receipt_id', $data['receipt_id'])->firstOrFail();
 
                 // Mark items as cancelled by matching product_id
                 foreach ($data['cancelled_items'] as $cancelItem) {
@@ -543,29 +499,19 @@ class EventController extends Controller
                     }
                 }
 
-                if (count($data['cancelled_items']) > 0) {
-
-                    // Update sale status
-                    $allItemsCancelled = $sale->items()->where('is_cancelled', false)->count() === 0;
-                    $sale->status = $allItemsCancelled ? 'cancelled' : 'partially_cancelled';
-                    $sale->save();
-
-                    // Update promo code generation history
-                    $promoHistory = PromoCodeGenerationHistory::where('sale_id', $sale->id)->first();
-                    if ($promoHistory) {
-                        $promoHistory->status = 'cancelled';
-                        $promoHistory->notes = 'Cancelled due to item cancellation';
-                        $promoHistory->save();
-                    }
-                }
+                // Update sale status
+                $allItemsCancelled = $sale->items()->where('is_cancelled', false)->count() === 0;
+                $sale->status = $allItemsCancelled ? 'cancelled' : 'partially_cancelled';
+                $sale->save();
 
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                // Log the error for debugging
                 logger()->error('Failed to process promo code cancellation event', [
                     'error' => $e->getMessage(),
-                    'data' => $data,
+                    'trace' => $e->getTraceAsString(),
+                    'process_id' => $processId,
+                    'sequence_id' => $sequenceId,
                 ]);
             }
         });
@@ -576,6 +522,7 @@ class EventController extends Controller
             'Promo code cancellation event received successfully',
             new EventReceivedResource([
                 'cancelled_items_count' => count($data['cancelled_items']),
+                'process_id' => $processId,
             ])
         );
     }
