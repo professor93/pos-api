@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Helpers\ApiResponse;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class PromoCodeGenerateRequest extends FormRequest
 {
@@ -31,5 +34,18 @@ class PromoCodeGenerateRequest extends FormRequest
             'receipt_id.unique' => 'This receipt ID has already been processed',
             'items.min' => 'At least one item is required',
         ];
+    }
+
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(
+            ApiResponse::make(
+                false,
+                422,
+                'Validation failed',
+                null,
+                ['errors' => $validator->errors()]
+            )
+        );
     }
 }

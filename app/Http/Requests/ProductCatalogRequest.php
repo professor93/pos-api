@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Helpers\ApiResponse;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class ProductCatalogRequest extends FormRequest
 {
@@ -32,5 +35,18 @@ class ProductCatalogRequest extends FormRequest
             'products.min' => 'At least one product is required',
             'products.*.barcode.regex' => 'Barcode must contain only alphanumeric characters and hyphens',
         ];
+    }
+
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(
+            ApiResponse::make(
+                false,
+                422,
+                'Validation failed',
+                null,
+                ['errors' => $validator->errors()]
+            )
+        );
     }
 }

@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Helpers\ApiResponse;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class InventoryItemsRemovedRequest extends FormRequest
 {
@@ -16,7 +19,7 @@ class InventoryItemsRemovedRequest extends FormRequest
         return [
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|string|max:255',
-            'items.*.branch_id' => 'required|integer',
+            'items.*.branch_id' => 'required|string|max:255',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.previous_quantity' => 'required|numeric|min:0',
         ];
@@ -27,5 +30,18 @@ class InventoryItemsRemovedRequest extends FormRequest
         return [
             'items.min' => 'At least one item is required',
         ];
+    }
+
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(
+            ApiResponse::make(
+                false,
+                422,
+                'Validation failed',
+                null,
+                ['errors' => $validator->errors()]
+            )
+        );
     }
 }
