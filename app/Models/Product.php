@@ -16,6 +16,7 @@ class Product extends Model
         'barcode',
         'description',
         'price',
+        'discount_price',
         'unit',
         'category',
         'is_active',
@@ -27,6 +28,7 @@ class Product extends Model
     {
         return [
             'price' => 'decimal:2',
+            'discount_price' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }
