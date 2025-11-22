@@ -23,6 +23,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // force HTTPS in production
+        // if ($this->app->environment('production')) {
+            \URL::forceScheme('https');
+        // }
+
         // Configure Scramble to use /api-docs instead of /docs/api
         Scramble::registerUiRoute('api-docs')
             ->middleware(config('scramble.middleware', []));
