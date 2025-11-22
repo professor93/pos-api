@@ -15,7 +15,7 @@ class PromoCodeGeneratedResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'check_number' => $this->resource['check_number'],
+            'receipt_id' => $this->resource['receipt_id'],
             'codes' => $this->resource['codes'],
         ];
     }

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
+            $table->string('ext_id')->unique();
             $table->string('name');
             $table->string('barcode')->unique();
             $table->text('description')->nullable();
@@ -21,11 +22,7 @@ return new class extends Migration
             $table->string('unit')->default('pcs'); // pcs, kg, litre, etc.
             $table->string('category')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->unsignedBigInteger('sequence_id')->nullable();
             $table->timestamps();
-
-            // Add index for sequence_id
-            $table->index('sequence_id');
         });
     }
 

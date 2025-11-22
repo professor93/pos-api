@@ -18,6 +18,7 @@ class EventReceivedResource extends JsonResource
             'products_count' => $this->resource['products_count'] ?? null,
             'items_count' => $this->resource['items_count'] ?? null,
             'cancelled_items_count' => $this->resource['cancelled_items_count'] ?? null,
+            'process_id' => $this->resource['process_id'] ?? null,
         ], fn($value) => $value !== null);
     }
 }

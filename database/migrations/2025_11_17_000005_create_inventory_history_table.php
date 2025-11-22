@@ -20,13 +20,11 @@ return new class extends Migration
             $table->decimal('previous_quantity', 10, 3);
             $table->decimal('new_quantity', 10, 3);
             $table->decimal('total_quantity', 10, 3)->nullable();
-            $table->unsignedBigInteger('sequence_id')->nullable();
             $table->timestamps();
 
             // Add indexes for better query performance
             $table->index('product_id');
             $table->index('branch_id');
-            $table->index('sequence_id');
         });
     }
 

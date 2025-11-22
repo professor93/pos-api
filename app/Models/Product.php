@@ -11,7 +11,7 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
-        'id',
+        'ext_id',
         'name',
         'barcode',
         'description',
@@ -20,7 +20,6 @@ class Product extends Model
         'unit',
         'category',
         'is_active',
-        'sequence_id',
     ];
 
     protected function casts(): array
