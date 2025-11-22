@@ -17,15 +17,14 @@ return new class extends Migration
             $table->string('barcode')->unique();
             $table->text('description')->nullable();
             $table->decimal('price', 10, 2);
+            $table->decimal('discount_price', 10, 2)->nullable();
             $table->string('unit')->default('pcs'); // pcs, kg, litre, etc.
             $table->string('category')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->enum('status', ['new', 'processed', 'failed'])->default('new');
             $table->unsignedBigInteger('sequence_id')->nullable();
             $table->timestamps();
 
-            // Add index for status and sequence_id
-            $table->index('status');
+            // Add index for sequence_id
             $table->index('sequence_id');
         });
     }

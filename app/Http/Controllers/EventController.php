@@ -35,6 +35,7 @@ class EventController extends Controller
      * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
      * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
      * @bodyParam products.*.price number required Product price. Example: 2.50
+     * @bodyParam products.*.discount_price number Discount price. Example: 2.00
      * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
      * @bodyParam products.*.category string Product category. Example: Beverages
      *
@@ -66,6 +67,7 @@ class EventController extends Controller
             'products.*.barcode' => 'required|string',
             'products.*.description' => 'nullable|string',
             'products.*.price' => 'required|numeric|min:0',
+            'products.*.discount_price' => 'nullable|numeric|min:0',
             'products.*.unit' => 'required|string',
             'products.*.category' => 'nullable|string',
         ]);
@@ -100,10 +102,10 @@ class EventController extends Controller
                         'barcode' => $productData['barcode'],
                         'description' => $productData['description'] ?? null,
                         'price' => $productData['price'],
+                        'discount_price' => $productData['discount_price'] ?? null,
                         'unit' => $productData['unit'],
                         'category' => $productData['category'] ?? null,
                         'is_active' => true,
-                        'status' => 'new',
                         'sequence_id' => $data['sequence_id'],
                     ]);
                 }
@@ -130,6 +132,114 @@ class EventController extends Controller
     }
 
     /**
+     * Handle product catalog updated event
+     *
+     * This endpoint processes product catalog update events from external systems.
+     * Existing products are updated with new data.
+     * Processing is deferred to after the HTTP response is sent.
+     *
+     * @tags Events
+     *
+     * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 2
+     * @bodyParam products array required Array of products to update (at least 1 required).
+     * @bodyParam products.*.id string required Product ID from external system. Example: PROD-101
+     * @bodyParam products.*.name string required Product name. Example: Coca Cola 500ml
+     * @bodyParam products.*.barcode string required Product barcode (must be unique). Example: 1234567890123
+     * @bodyParam products.*.description string Product description. Example: Refreshing cola drink
+     * @bodyParam products.*.price number required Product price. Example: 2.50
+     * @bodyParam products.*.discount_price number Discount price. Example: 2.00
+     * @bodyParam products.*.unit string required Unit of measurement. Example: pcs
+     * @bodyParam products.*.category string Product category. Example: Beverages
+     *
+     * @param  Request  $request
+     * @return JsonResponse
+     *
+     * @response 200 scenario="Success" {
+     *   "ok": true,
+     *   "code": 200,
+     *   "message": "Product catalog update event received successfully",
+     *   "result": {
+     *     "products_count": 2
+     *   }
+     * }
+     *
+     * @response 400 scenario="Validation Error" {
+     *   "ok": false,
+     *   "code": 400,
+     *   "message": "Validation failed"
+     * }
+     */
+    public function productCatalogUpdated(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'sequence_id' => 'required|integer',
+            'products' => 'required|array|min:1',
+            'products.*.id' => 'required|string',
+            'products.*.name' => 'required|string',
+            'products.*.barcode' => 'required|string',
+            'products.*.description' => 'nullable|string',
+            'products.*.price' => 'required|numeric|min:0',
+            'products.*.discount_price' => 'nullable|numeric|min:0',
+            'products.*.unit' => 'required|string',
+            'products.*.category' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::make(
+                false,
+                400,
+                'Validation failed'
+            );
+        }
+
+        $data = $validator->validated();
+        $processId = Str::uuid()->toString();
+
+        // Defer processing to after response is sent
+        defer(function () use ($data, $processId) {
+            try {
+                DB::beginTransaction();
+
+                foreach ($data['products'] as $productData) {
+                    // Find product by ID and update it
+                    $product = Product::find($productData['id']);
+
+                    if ($product) {
+                        $product->update([
+                            'name' => $productData['name'],
+                            'barcode' => $productData['barcode'],
+                            'description' => $productData['description'] ?? null,
+                            'price' => $productData['price'],
+                            'discount_price' => $productData['discount_price'] ?? null,
+                            'unit' => $productData['unit'],
+                            'category' => $productData['category'] ?? null,
+                            'sequence_id' => $data['sequence_id'],
+                        ]);
+                    }
+                }
+
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                // Log the error for debugging
+                logger()->error('Failed to process product catalog update event', [
+                    'error' => $e->getMessage(),
+                    'data' => $data,
+                ]);
+            }
+        });
+
+        return ApiResponse::make(
+            true,
+            200,
+            'Product catalog update event received successfully',
+            new EventReceivedResource([
+                'products_count' => count($data['products']),
+            ])
+        );
+    }
+
+    /**
      * Handle inventory items added event
      *
      * This endpoint processes inventory addition events from external systems.
@@ -140,15 +250,12 @@ class EventController extends Controller
      * @tags Events
      *
      * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
-     * @bodyParam user_id integer User ID who performed the action. Example: 5
      * @bodyParam items array required Array of inventory items to add (at least 1 required).
      * @bodyParam items.*.product_id string required Product ID. Example: PROD-101
      * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
      * @bodyParam items.*.quantity number required Quantity added (min: 0.001). Example: 10.500
      * @bodyParam items.*.previous_quantity number required Previous quantity before addition. Example: 40.000
      * @bodyParam items.*.total_quantity number required New total quantity after addition. Example: 50.500
-     * @bodyParam items.*.reason string Reason for addition. Example: Stock replenishment
-     * @bodyParam items.*.notes string Additional notes. Example: Delivery from supplier ABC
      *
      * @param  Request  $request
      * @return JsonResponse
@@ -178,9 +285,6 @@ class EventController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.previous_quantity' => 'required|numeric|min:0',
             'items.*.total_quantity' => 'required|numeric|min:0',
-            'items.*.reason' => 'nullable|string',
-            'items.*.notes' => 'nullable|string',
-            'user_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -208,10 +312,6 @@ class EventController extends Controller
                         'previous_quantity' => $item['previous_quantity'],
                         'new_quantity' => $item['total_quantity'],
                         'total_quantity' => $item['total_quantity'],
-                        'reason' => $item['reason'] ?? 'Stock replenishment',
-                        'notes' => $item['notes'] ?? null,
-                        'user_id' => $data['user_id'] ?? null,
-                        'status' => 'new',
                         'sequence_id' => $data['sequence_id'],
                     ]);
                 }
@@ -248,14 +348,11 @@ class EventController extends Controller
      * @tags Events
      *
      * @bodyParam sequence_id integer required Event sequence ID for ordering. Example: 1
-     * @bodyParam user_id integer User ID who performed the action. Example: 5
      * @bodyParam items array required Array of inventory items to remove (at least 1 required).
      * @bodyParam items.*.product_id string required Product ID. Example: PROD-101
      * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
      * @bodyParam items.*.quantity number required Quantity removed (min: 0.001). Example: 5.000
      * @bodyParam items.*.previous_quantity number required Previous quantity before removal. Example: 50.500
-     * @bodyParam items.*.reason string Reason for removal. Example: Stock depletion
-     * @bodyParam items.*.notes string Additional notes. Example: Damaged items removed
      *
      * @param  Request  $request
      * @return JsonResponse
@@ -284,9 +381,6 @@ class EventController extends Controller
             'items.*.branch_id' => 'required|integer',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.previous_quantity' => 'required|numeric|min:0',
-            'items.*.reason' => 'nullable|string',
-            'items.*.notes' => 'nullable|string',
-            'user_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -315,10 +409,6 @@ class EventController extends Controller
                         'quantity' => $item['quantity'],
                         'previous_quantity' => $item['previous_quantity'],
                         'new_quantity' => $newQuantity,
-                        'reason' => $item['reason'] ?? 'Stock depletion',
-                        'notes' => $item['notes'] ?? null,
-                        'user_id' => $data['user_id'] ?? null,
-                        'status' => 'new',
                         'sequence_id' => $data['sequence_id'],
                     ]);
                 }
@@ -359,7 +449,7 @@ class EventController extends Controller
      * @bodyParam cashier_id string required Cashier identifier performing the cancellation. Example: CASH123
      * @bodyParam cancelled_items array required Array of items to cancel (at least 1 required).
      * @bodyParam cancelled_items.*.product_id string required Product ID. Example: PROD-001
-     * @bodyParam cancelled_items.*.price number required Item price. Example: 25.00
+     * @bodyParam cancelled_items.*.amount number required Item amount. Example: 25.00
      *
      * @param  Request  $request
      * @return JsonResponse
@@ -400,7 +490,7 @@ class EventController extends Controller
             'cashier_id' => 'required|string',
             'cancelled_items' => 'required|array|min:1',
             'cancelled_items.*.product_id' => 'required|string',
-            'cancelled_items.*.price' => 'required|numeric|min:0',
+            'cancelled_items.*.amount' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {

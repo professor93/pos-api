@@ -20,10 +20,6 @@ class InventoryHistory extends Model
         'previous_quantity',
         'new_quantity',
         'total_quantity',
-        'reason',
-        'notes',
-        'user_id',
-        'status',
         'sequence_id',
     ];
 
@@ -51,13 +47,5 @@ class InventoryHistory extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
-    }
-
-    /**
-     * Get the user who made this inventory change.
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

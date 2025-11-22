@@ -15,8 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('sale_id')->constrained('sales')->onDelete('cascade');
             $table->string('promo_code')->nullable(); // The generated promo code (if applicable)
-            $table->decimal('amount_spent', 10, 2);
-            $table->decimal('discount_received', 10, 2);
             $table->enum('status', ['generated', 'cancelled', 'failed'])->default('generated');
             $table->text('notes')->nullable();
             $table->timestamps();

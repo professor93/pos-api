@@ -16,10 +16,10 @@ class Product extends Model
         'barcode',
         'description',
         'price',
+        'discount_price',
         'unit',
         'category',
         'is_active',
-        'status',
         'sequence_id',
     ];
 
@@ -27,6 +27,7 @@ class Product extends Model
     {
         return [
             'price' => 'decimal:2',
+            'discount_price' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }
