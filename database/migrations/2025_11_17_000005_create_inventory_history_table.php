@@ -13,13 +13,12 @@ return new class extends Migration
     {
         Schema::create('inventory_history', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('product_id'); // No constraint for events
-            $table->unsignedBigInteger('branch_id'); // No constraint for events
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('branch_id');
             $table->enum('type', ['added', 'removed', 'adjusted']);
             $table->decimal('quantity', 10, 3);
             $table->decimal('previous_quantity', 10, 3);
             $table->decimal('new_quantity', 10, 3);
-            $table->decimal('total_quantity', 10, 3)->nullable();
             $table->timestamps();
 
             // Add indexes for better query performance

@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Helpers\ApiResponse;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class PromoCodeCancelRequest extends FormRequest
 {
@@ -29,5 +32,18 @@ class PromoCodeCancelRequest extends FormRequest
             'receipt_id.exists' => 'Sale not found',
             'cancelled_items.min' => 'At least one item must be cancelled',
         ];
+    }
+
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(
+            ApiResponse::make(
+                false,
+                422,
+                'Validation failed',
+                null,
+                ['errors' => $validator->errors()]
+            )
+        );
     }
 }

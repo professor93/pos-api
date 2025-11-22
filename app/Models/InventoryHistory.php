@@ -19,7 +19,6 @@ class InventoryHistory extends Model
         'quantity',
         'previous_quantity',
         'new_quantity',
-        'total_quantity',
     ];
 
     protected function casts(): array
@@ -28,7 +27,6 @@ class InventoryHistory extends Model
             'quantity' => 'decimal:3',
             'previous_quantity' => 'decimal:3',
             'new_quantity' => 'decimal:3',
-            'total_quantity' => 'decimal:3',
         ];
     }
 

@@ -19,6 +19,32 @@ use Illuminate\Support\Str;
 
 use function Illuminate\Support\defer;
 
+/**
+ * POS Events API
+ *
+ * @group Events
+ *
+ * ## Security
+ *
+ * All endpoints under /api/v1/pos/* are protected by the following security measures:
+ *
+ * ### Request Signature Verification (X-Signature Header)
+ * Every request must include an X-Signature header containing an HMAC-SHA256 hash of the request payload.
+ * The signature is computed using a shared secret key.
+ *
+ * **Signature Generation:**
+ * ```
+ * signature = HMAC-SHA256(request_body, secret_key)
+ * ```
+ *
+ * **Note:** Signature validation is disabled in local environment for development purposes.
+ *
+ * ### IP Whitelist
+ * Only requests from pre-approved IP addresses are accepted. All other requests will be rejected.
+ * Contact the system administrator to add your IP address to the whitelist.
+ *
+ * @header X-Signature string required HMAC-SHA256 signature of request body. Example: a3b5c7d9e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c4d6e8f0a2b4
+ */
 class EventController extends Controller
 {
     /**
@@ -235,8 +261,8 @@ class EventController extends Controller
      *
      * @header X-Sequence-Id integer required Event sequence ID for ordering. Example: 1
      * @bodyParam items array required Array of inventory items to add (at least 1 required).
-     * @bodyParam items.*.product_id string required Product ID. Example: PROD-101
-     * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
+     * @bodyParam items.*.product_id string required Product external ID. Example: PROD-101
+     * @bodyParam items.*.branch_id string required Branch external ID. Example: BR001
      * @bodyParam items.*.quantity number required Quantity added (min: 0.001). Example: 10.500
      * @bodyParam items.*.previous_quantity number required Previous quantity before addition. Example: 40.000
      * @bodyParam items.*.total_quantity number required New total quantity after addition. Example: 50.500
@@ -274,21 +300,29 @@ class EventController extends Controller
                 // Prepare bulk insert data
                 $inventoryRecords = [];
                 foreach ($data['items'] as $item) {
-                    $inventoryRecords[] = [
-                        'product_id' => $item['product_id'],
-                        'branch_id' => $item['branch_id'],
-                        'type' => 'added',
-                        'quantity' => $item['quantity'],
-                        'previous_quantity' => $item['previous_quantity'],
-                        'new_quantity' => $item['total_quantity'],
-                        'total_quantity' => $item['total_quantity'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
+                    // Look up product by ext_id
+                    $product = Product::where('ext_id', $item['product_id'])->first();
+                    // Look up branch by ext_id
+                    $branch = Branch::where('ext_id', $item['branch_id'])->first();
+
+                    if ($product && $branch) {
+                        $inventoryRecords[] = [
+                            'product_id' => $product->id,
+                            'branch_id' => $branch->id,
+                            'type' => 'added',
+                            'quantity' => $item['quantity'],
+                            'previous_quantity' => $item['previous_quantity'],
+                            'new_quantity' => $item['total_quantity'],
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
                 }
 
                 // Bulk insert inventory records
-                InventoryHistory::insert($inventoryRecords);
+                if (!empty($inventoryRecords)) {
+                    InventoryHistory::insert($inventoryRecords);
+                }
 
                 DB::commit();
             } catch (\Exception $e) {
@@ -325,8 +359,8 @@ class EventController extends Controller
      *
      * @header X-Sequence-Id integer required Event sequence ID for ordering. Example: 1
      * @bodyParam items array required Array of inventory items to remove (at least 1 required).
-     * @bodyParam items.*.product_id string required Product ID. Example: PROD-101
-     * @bodyParam items.*.branch_id integer required Branch ID. Example: 1
+     * @bodyParam items.*.product_id string required Product external ID. Example: PROD-101
+     * @bodyParam items.*.branch_id string required Branch external ID. Example: BR001
      * @bodyParam items.*.quantity number required Quantity removed (min: 0.001). Example: 5.000
      * @bodyParam items.*.previous_quantity number required Previous quantity before removal. Example: 50.500
      *
@@ -363,22 +397,31 @@ class EventController extends Controller
                 // Prepare bulk insert data
                 $inventoryRecords = [];
                 foreach ($data['items'] as $item) {
-                    $newQuantity = max(0, $item['previous_quantity'] - $item['quantity']);
+                    // Look up product by ext_id
+                    $product = Product::where('ext_id', $item['product_id'])->first();
+                    // Look up branch by ext_id
+                    $branch = Branch::where('ext_id', $item['branch_id'])->first();
 
-                    $inventoryRecords[] = [
-                        'product_id' => $item['product_id'],
-                        'branch_id' => $item['branch_id'],
-                        'type' => 'removed',
-                        'quantity' => $item['quantity'],
-                        'previous_quantity' => $item['previous_quantity'],
-                        'new_quantity' => $newQuantity,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
+                    if ($product && $branch) {
+                        $newQuantity = max(0, $item['previous_quantity'] - $item['quantity']);
+
+                        $inventoryRecords[] = [
+                            'product_id' => $product->id,
+                            'branch_id' => $branch->id,
+                            'type' => 'removed',
+                            'quantity' => $item['quantity'],
+                            'previous_quantity' => $item['previous_quantity'],
+                            'new_quantity' => $newQuantity,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
                 }
 
                 // Bulk insert inventory records
-                InventoryHistory::insert($inventoryRecords);
+                if (!empty($inventoryRecords)) {
+                    InventoryHistory::insert($inventoryRecords);
+                }
 
                 DB::commit();
             } catch (\Exception $e) {

@@ -12,6 +12,32 @@ use App\Services\PromoCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * POS Promo Code API
+ *
+ * @group Promo Codes
+ *
+ * ## Security
+ *
+ * All endpoints under /api/v1/pos/* are protected by the following security measures:
+ *
+ * ### Request Signature Verification (X-Signature Header)
+ * Every request must include an X-Signature header containing an HMAC-SHA256 hash of the request payload.
+ * The signature is computed using a shared secret key.
+ *
+ * **Signature Generation:**
+ * ```
+ * signature = HMAC-SHA256(request_body, secret_key)
+ * ```
+ *
+ * **Note:** Signature validation is disabled in local environment for development purposes.
+ *
+ * ### IP Whitelist
+ * Only requests from pre-approved IP addresses are accepted. All other requests will be rejected.
+ * Contact the system administrator to add your IP address to the whitelist.
+ *
+ * @header X-Signature string required HMAC-SHA256 signature of request body. Example: a3b5c7d9e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c4d6e8f0a2b4
+ */
 class PromoCodeController extends Controller
 {
     public function __construct(
@@ -84,8 +110,6 @@ class PromoCodeController extends Controller
     public function generate(PromoCodeGenerateRequest $request): JsonResponse
     {
         try {
-            DB::beginTransaction();
-
             $data = $request->validated();
 
             // Look up branch by ext_id
@@ -98,6 +122,8 @@ class PromoCodeController extends Controller
                     'Branch not found for the provided branch_id'
                 );
             }
+
+            DB::beginTransaction();
 
             // Create the sale record
             $sale = Sale::create([
